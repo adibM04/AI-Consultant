@@ -17,6 +17,13 @@ Inputs (inside --dir):
     waivers.json            optional {"ITEM-ID": {"reason","accepted_by","created","expires"}}.
                             Validated here: created <= today, expires within 180 days of
                             created (90 for critical items), all fields present.
+    attestations.json       optional {"ITEM-ID": {"attested_by","date","expires","note","evidence":[path]}}.
+                            A founder's signed statement that a process or console item is satisfied
+                            (a restore test, a key rotation). Only for items a repository cannot show
+                            (checklist evidence "process" or "config"), only to settle an item that is
+                            otherwise unknown, never to override a failing finding. Needs an evidence
+                            file that exists, and expires within a year. Listed prominently; the tool
+                            does not verify it.
     state.json              written by this script; used for "since last run"
 
 Outputs: REPORT.md and state.json. With --ci, exit 1 if the verdict is NOT READY.
@@ -180,7 +187,45 @@ def active_waivers(waivers: dict, today: dt.date, severities: dict | None = None
     return active, expired, rejected
 
 
-def build_rows(checklist: dict, profile: dict, findings: dict, waivers: dict):
+ATTEST_MAX_DAYS = 365
+ATTESTABLE = {"process", "config"}
+
+
+def active_attestations(attestations: dict, today: dt.date, items: dict, root: Path | None = None):
+    """Split attestations into (active, expired, rejected). `items` maps checklist id -> item.
+
+    Rejected unless: known item; the item is not code-checkable (a statement cannot replace
+    reading the code); attested_by and note present; date not in the future; expires after date
+    and within a year; and, when `root` is given, at least one evidence file really exists.
+    """
+    active, expired, rejected = {}, {}, {}
+    for iid, a in (attestations or {}).items():
+        item = items.get(iid)
+        if not isinstance(a, dict):
+            rejected[iid] = "not an object"
+        elif item is None:
+            rejected[iid] = "unknown checklist item"
+        elif item.get("evidence") not in ATTESTABLE:
+            rejected[iid] = "this item can be checked in code, so it must pass on the code, not on a statement"
+        elif not str(a.get("attested_by", "")).strip() or not str(a.get("note", "")).strip():
+            rejected[iid] = "missing attested_by or note"
+        else:
+            date, exp = _date(a.get("date")), _date(a.get("expires"))
+            refs = a.get("evidence") if isinstance(a.get("evidence"), list) else []
+            if date is None or exp is None:
+                rejected[iid] = "missing or invalid date/expires"
+            elif date > today:
+                rejected[iid] = "date is in the future"
+            elif exp <= date or (exp - date).days > ATTEST_MAX_DAYS:
+                rejected[iid] = f"expires must be after the date and within {ATTEST_MAX_DAYS} days of it"
+            elif root is not None and not any(evidence_resolves(r, root) for r in refs):
+                rejected[iid] = "no evidence file found at the stated path"
+            else:
+                (active if exp >= today else expired)[iid] = a
+    return active, expired, rejected
+
+
+def build_rows(checklist: dict, profile: dict, findings: dict, waivers: dict, attestations: dict | None = None):
     tags = set(profile.get("tags", []))
     max_tier = STAGE_TIER.get(profile.get("stage", "launch"), 1)
     rows = []
@@ -200,6 +245,11 @@ def build_rows(checklist: dict, profile: dict, findings: dict, waivers: dict):
                     row["status"] = f["status"]
                     row["finding"] = f
                     row["state"] = "na" if f["status"] == "na" else f["status"]
+                att = (attestations or {}).get(item["id"])
+                if att and row["state"] in {"unknown", "unaudited"}:
+                    row["state"], row["attestation"] = "attested", att
+                elif att and row["state"] in {"fail", "partial"}:
+                    row["attestation_ignored"] = True  # a failing code finding is never overridden by a statement
                 if item["id"] in waivers and row["state"] in OPEN | {"unaudited"}:
                     row["state"] = "waived"
             rows.append(row)
@@ -263,7 +313,9 @@ def group(rows, pred):
     return by_sev
 
 
-def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=None, rejected_waivers=None) -> tuple[str, dict]:
+def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=None, rejected_waivers=None,
+           attest=None) -> tuple[str, dict]:
+    attest_expired, attest_rejected = (attest or ({}, {}))
     verdict = verdict_for(rows)
     in_scope = [r for r in rows if r["state"] not in {"not-applicable", "later"}]
     counted = [r for r in in_scope if r["state"] != "na"]
@@ -271,6 +323,7 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
     n = lambda st: sum(1 for r in counted if r["state"] == st)
 
     lines: list[str] = []
+    attested_rows = [r for r in rows if r["state"] == "attested"]
     lines += [
         f"# Production readiness report: {profile.get('project', 'this project')}",
         "",
@@ -281,9 +334,14 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
         "",
         VERDICTS[verdict],
         "",
-        "| Pass | Fail | Partial | Unknown | Waived | Not audited |",
-        "|---:|---:|---:|---:|---:|---:|",
-        f"| {n('pass')} | {n('fail')} | {n('partial')} | {n('unknown')} | {n('waived')} | {n('unaudited')} |",
+    ]
+    if attested_rows:
+        lines += [f"This verdict relies on {len(attested_rows)} item(s) settled by a person's attestation rather than by the code "
+                  f"({sum(1 for r in attested_rows if r['severity'] == 'critical')} critical). The tool did not verify them; see Human attestations below.", ""]
+    lines += [
+        "| Pass | Fail | Partial | Unknown | Attested | Waived | Not audited |",
+        "|---:|---:|---:|---:|---:|---:|---:|",
+        f"| {n('pass')} | {n('fail')} | {n('partial')} | {n('unknown')} | {n('attested')} | {n('waived')} | {n('unaudited')} |",
         "",
         f"Coverage: {len(audited)} of {len(counted)} in-scope items audited. "
         f"{sum(1 for r in rows if r['state'] == 'later')} items are deferred to later stages and "
@@ -298,8 +356,8 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
 
     if prev_state:
         prev = prev_state.get("statuses", {})
-        fixed = [r["id"] for r in counted if prev.get(r["id"]) in OPEN | {"unaudited"} and r["state"] in {"pass", "waived", "na"}]
-        regressed = [r["id"] for r in counted if prev.get(r["id"]) == "pass" and r["state"] in OPEN]
+        fixed = [r["id"] for r in counted if prev.get(r["id"]) in OPEN | {"unaudited"} and r["state"] in {"pass", "waived", "na", "attested"}]
+        regressed = [r["id"] for r in counted if prev.get(r["id"]) in {"pass", "attested"} and r["state"] in OPEN | {"unaudited"}]
         lines += [
             "## Since the last run",
             "",
@@ -326,7 +384,7 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
             "## Needs a human to confirm",
             "",
             "These could not be established from the repository. Answer each with evidence "
-            "(a screenshot, a document, a console setting) and re-run the consultant.",
+            "(a screenshot, a document, a console setting) and record it with `/ai-consultant:consult-evidence`.",
             "",
         ]
         for sev in SEVERITY_ORDER:
@@ -366,6 +424,20 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
             lines.append(f"- tier {r['tier']} · {r['id']} · {r['title']}")
         lines.append("")
 
+    if attested_rows or attest_expired or attest_rejected:
+        lines += ["## Human attestations", "",
+                  "Statements by a person that something the code cannot show is true. The tool did not verify these; "
+                  "they stop counting when they expire.", ""]
+        for r in attested_rows:
+            a = r["attestation"]
+            lines.append(f"- {r['id']} · {r['severity']} · {r['title']}. Attested by {a.get('attested_by')} on {a.get('date')}, "
+                         f"valid until {a.get('expires')}: {str(a.get('note'))[:200]} (evidence: {fmt_evidence(a.get('evidence'))})")
+        for iid, a in attest_expired.items():
+            lines.append(f"- **EXPIRED** {iid}: attested {a.get('date')}, expired {a.get('expires')}. The item is unknown again.")
+        for iid, why in attest_rejected.items():
+            lines.append(f"- **REJECTED** {iid}: {why}. The attestation was ignored.")
+        lines.append("")
+
     waived = [r for r in rows if r["state"] == "waived"]
     if waived or expired_waivers or rejected_waivers:
         lines += ["## Accepted risks", ""]
@@ -399,6 +471,35 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
     return "\n".join(lines).rstrip() + "\n", state
 
 
+def load_state(audit_dir: Path, root: Path, checklist_path: Path = DEFAULT_CHECKLIST, today: dt.date | None = None) -> dict:
+    """Load everything and compute the per-item rows. Shared by the report and the questionnaire tool."""
+    today = today or dt.date.today()
+    checklist = load_json(checklist_path)
+    if checklist is None:
+        sys.exit(f"checklist not found: {checklist_path}")
+    profile = load_json(audit_dir / "profile.json")
+    if profile is None:
+        sys.exit(f"{audit_dir}/profile.json not found. Run the consult skill first.")
+    if profile.get("stage", "launch") not in STAGE_TIER:
+        sys.exit(f"profile.stage must be one of {sorted(STAGE_TIER)}")
+    bad_tags = set(profile.get("tags", [])) - set(checklist["tags"])
+    if bad_tags:
+        sys.exit(f"profile has unknown tags: {sorted(bad_tags)}")
+
+    items = {i["id"]: i for d in checklist["domains"] for i in d["items"]}
+    severities = {k: v["severity"] for k, v in items.items()}
+    findings, warnings = collect_findings(audit_dir / "findings", set(items), root=root)
+    waivers, w_expired, w_rejected = active_waivers(load_json(audit_dir / "waivers.json", {}), today, severities)
+    attest, a_expired, a_rejected = active_attestations(load_json(audit_dir / "attestations.json", {}), today, items, root)
+    rows = build_rows(checklist, profile, findings, waivers, attest)
+    for r in rows:
+        if r.get("attestation_ignored"):
+            warnings.append(f"{r['id']}: an attestation exists but the code finding is {r['state']}; the attestation was ignored")
+    return {"checklist": checklist, "profile": profile, "rows": rows, "warnings": warnings, "today": today,
+            "findings": findings, "waivers": waivers, "waivers_expired": w_expired, "waivers_rejected": w_rejected,
+            "attestations": attest, "attest_expired": a_expired, "attest_rejected": a_rejected}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dir", default=".consultant", type=Path)
@@ -409,33 +510,20 @@ def main() -> int:
     args = ap.parse_args()
 
     today = dt.date.fromisoformat(args.today) if args.today else dt.date.today()
-    checklist = load_json(args.checklist)
-    if checklist is None:
-        sys.exit(f"checklist not found: {args.checklist}")
-    profile = load_json(args.dir / "profile.json")
-    if profile is None:
-        sys.exit(f"{args.dir}/profile.json not found. Run the consult skill first.")
-    if profile.get("stage", "launch") not in STAGE_TIER:
-        sys.exit(f"profile.stage must be one of {sorted(STAGE_TIER)}")
-    bad_tags = set(profile.get("tags", [])) - set(checklist["tags"])
-    if bad_tags:
-        sys.exit(f"profile has unknown tags: {sorted(bad_tags)}")
-
-    known = {i["id"] for d in checklist["domains"] for i in d["items"]}
-    severities = {i["id"]: i["severity"] for d in checklist["domains"] for i in d["items"]}
-    findings, warnings = collect_findings(args.dir / "findings", known, root=args.root)
-    waivers, expired, rejected = active_waivers(load_json(args.dir / "waivers.json", {}), today, severities)
-    rows = build_rows(checklist, profile, findings, waivers)
+    st = load_state(args.dir, args.root, args.checklist, today)
     prev = load_json(args.dir / "state.json")
 
-    text, state = render(profile, rows, warnings, expired, prev, today, waivers, rejected)
+    text, state = render(st["profile"], st["rows"], st["warnings"], st["waivers_expired"], prev, today, st["waivers"],
+                         st["waivers_rejected"], (st["attest_expired"], st["attest_rejected"]))
     (args.dir / "REPORT.md").write_text(text, encoding="utf-8")
     (args.dir / "state.json").write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     print(f"{state['verdict']}: wrote {args.dir}/REPORT.md")
-    for w in warnings:
+    for w in st["warnings"]:
         print(f"warning: {w}", file=sys.stderr)
-    for wid, why in rejected.items():
+    for wid, why in st["waivers_rejected"].items():
         print(f"warning: waiver {wid} rejected: {why}", file=sys.stderr)
+    for iid, why in st["attest_rejected"].items():
+        print(f"warning: attestation {iid} rejected: {why}", file=sys.stderr)
     return 1 if args.ci and state["verdict"] == "NOT READY" else 0
 
 

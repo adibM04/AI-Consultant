@@ -38,6 +38,8 @@ Needs Python 3 (standard library only). Optional: [gitleaks](https://github.com/
 | `/ai-consultant:consult-audit identity payments` | Re-check specific domains after fixing things |
 | `/ai-consultant:consult-roadmap` | Turn the report into an ordered plan with sizes, owners and what is safe to do with AI |
 | `/ai-consultant:consult-ask "do I need SOC 2?"` | Plain-English advice grounded in your repo; also records accepted risks with an expiry |
+| `/ai-consultant:consult-evidence` | Prove what code cannot show (a restore test, key rotation, who owns the registrar) as a signed, expiring attestation, to close the "unknown" items |
+| `/ai-consultant:consult-questionnaire q.csv` | Draft answers to an enterprise buyer's security questionnaire, capped by what the audit can prove |
 
 You can also just ask: "is my app ready for paying customers?"
 
@@ -87,6 +89,7 @@ Scripts produce facts; the model interprets them. Nothing here is installed or e
 |---|---|
 | `scripts/verify_packages.py` | Whether every npm / PyPI dependency exists, and flags hallucinated names (`NOT_FOUND`), look-alikes of popular packages (`TYPOSQUAT_SUSPECT`), brand-new or abandoned packages. Sends **package names only** to the public registries; `--offline` sends nothing. |
 | `scripts/run_scanners.py` | Runs gitleaks, osv-scanner and trivy if you have them (semgrep with `--semgrep`), normalises the output, and strips secret values. Missing tools are reported with install hints, never installed. |
+| `scripts/attest.py`, `scripts/questionnaire.py` | Attestations with validation and secret screening; honesty-capped questionnaire drafts |
 | `scripts/pr_guard.py` | The deterministic pull-request checks behind the GitHub Action |
 | `scripts/detect_stacks.py` | Detects Supabase, Firebase, Next.js, Stripe and AI-builder exports, so the auditors apply the right playbook |
 
@@ -105,6 +108,19 @@ Design choices worth knowing:
 - **Re-runs diff.** The report shows what you fixed and what regressed. Accepted risks go in `waivers.json` with a reason and an expiry, and reopen when they expire.
 
 See a rendered example in [`examples/sample-output/REPORT.md`](examples/sample-output/REPORT.md) (illustrative, hand-written against the deliberately broken [`examples/vibe-coded-app`](examples/vibe-coded-app)).
+
+## Close the unknowns, answer the buyer
+
+**Evidence.** Many items cannot be seen from code: has anyone restored a backup, were the leaked keys rotated, does the company own the domain registrar? `/ai-consultant:consult-evidence` walks you through doing it, helps you write an evidence note in `docs/evidence/` (it refuses text that looks like secrets), and records a signed attestation that expires within a year. Attestations can settle `unknown` items only. They never override a failing finding, never apply to anything checkable in code, and the report lists each one with who said it and when, as a human claim the tool did not verify.
+
+**Questionnaires.** `/ai-consultant:consult-questionnaire` maps each question to checklist items and drafts an answer per row. The honesty is enforced in code (`scripts/questionnaire.py`), not by asking the model nicely:
+
+- A stance cannot be stronger than the weakest backing item. One failed control makes "Yes" a "No" or "Partial", whatever the model wrote.
+- When the audit overrules a draft, the prose is thrown away and replaced with deterministic text built from the checklist.
+- The Evidence column lists only real files and named attestations, and "the audit did not look at this" is shown as *unknown*, never as *N/A*.
+- Output is a CSV with the original columns plus the draft, basis, evidence and what you still owe, ready for a person to review. Nothing is sent anywhere.
+
+The most useful part is often the "No" column: the specific gaps standing between you and the signature.
 
 ## Keep it honest in CI (GitHub Action)
 

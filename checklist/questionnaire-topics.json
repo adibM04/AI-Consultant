@@ -1,0 +1,600 @@
+{
+  "_note": "Keyword themes used by scripts/questionnaire.py to propose checklist items for buyer-questionnaire rows. The model makes the final mapping; this is a first pass.",
+  "topics": [
+    {
+      "id": "encryption-at-rest",
+      "keywords": [
+        "encrypt",
+        "at rest",
+        "encrypted at rest"
+      ],
+      "items": [
+        "SEC-12"
+      ]
+    },
+    {
+      "id": "encryption-in-transit",
+      "keywords": [
+        "tls",
+        "in transit",
+        "https",
+        "ssl",
+        "certificate"
+      ],
+      "items": [
+        "SEC-12",
+        "INF-09"
+      ]
+    },
+    {
+      "id": "mfa",
+      "keywords": [
+        "mfa",
+        "multi-factor",
+        "multifactor",
+        "two-factor",
+        "2fa",
+        "second factor"
+      ],
+      "items": [
+        "IDN-04"
+      ]
+    },
+    {
+      "id": "sso-saml",
+      "keywords": [
+        "sso",
+        "single sign",
+        "saml",
+        "oidc",
+        "openid",
+        "federat"
+      ],
+      "items": [
+        "IDN-10",
+        "IDN-11"
+      ]
+    },
+    {
+      "id": "scim-offboarding",
+      "keywords": [
+        "scim",
+        "deprovision",
+        "offboard",
+        "provisioning",
+        "terminated employee"
+      ],
+      "items": [
+        "IDN-12"
+      ]
+    },
+    {
+      "id": "passwords",
+      "keywords": [
+        "password",
+        "credential policy"
+      ],
+      "items": [
+        "IDN-03",
+        "IDN-02",
+        "IDN-06",
+        "IDN-07"
+      ]
+    },
+    {
+      "id": "sessions",
+      "keywords": [
+        "session",
+        "idle timeout",
+        "inactivity"
+      ],
+      "items": [
+        "IDN-05"
+      ]
+    },
+    {
+      "id": "access-control",
+      "keywords": [
+        "role-based",
+        "rbac",
+        "least privilege",
+        "access control",
+        "authorization",
+        "authorisation",
+        "segregation of duties"
+      ],
+      "items": [
+        "AUT-05",
+        "AUT-01",
+        "AUT-02",
+        "SEC-13"
+      ]
+    },
+    {
+      "id": "tenant-isolation",
+      "keywords": [
+        "tenant",
+        "logical separation",
+        "segregat",
+        "isolat",
+        "multi-tenant",
+        "commingl"
+      ],
+      "items": [
+        "AUT-03",
+        "AUT-04"
+      ]
+    },
+    {
+      "id": "audit-logging",
+      "keywords": [
+        "audit log",
+        "audit trail",
+        "logging",
+        "log retention",
+        "access logs",
+        "who accessed"
+      ],
+      "items": [
+        "CMP-04",
+        "CMP-03",
+        "SEC-14",
+        "OBS-01"
+      ]
+    },
+    {
+      "id": "support-access",
+      "keywords": [
+        "support access",
+        "impersonat",
+        "privileged access",
+        "admin access",
+        "customer data access"
+      ],
+      "items": [
+        "AUT-07",
+        "AUT-06"
+      ]
+    },
+    {
+      "id": "vulnerability-management",
+      "keywords": [
+        "vulnerab",
+        "patch",
+        "third-party librar",
+        "dependency",
+        "dependencies",
+        "open source",
+        "sbom"
+      ],
+      "items": [
+        "SEC-04",
+        "SEC-03",
+        "MNT-04",
+        "MNT-05"
+      ]
+    },
+    {
+      "id": "penetration-testing",
+      "keywords": [
+        "penetration",
+        "pen test",
+        "pentest",
+        "security assessment",
+        "security testing"
+      ],
+      "items": [
+        "SEC-16"
+      ]
+    },
+    {
+      "id": "secure-sdlc",
+      "keywords": [
+        "sdlc",
+        "code review",
+        "secure development",
+        "change management",
+        "peer review",
+        "pull request",
+        "ci/cd",
+        "deployment process"
+      ],
+      "items": [
+        "MNT-02",
+        "INF-03",
+        "TST-07",
+        "MNT-03",
+        "INF-04"
+      ]
+    },
+    {
+      "id": "secrets-management",
+      "keywords": [
+        "secret",
+        "key management",
+        "api key",
+        "credential storage",
+        "hard-coded",
+        "hardcoded"
+      ],
+      "items": [
+        "SEC-01",
+        "SEC-02",
+        "OPS-06"
+      ]
+    },
+    {
+      "id": "backups",
+      "keywords": [
+        "backup",
+        "back-up",
+        "back up"
+      ],
+      "items": [
+        "DAT-07",
+        "DAT-08",
+        "DAT-09"
+      ]
+    },
+    {
+      "id": "disaster-recovery",
+      "keywords": [
+        "disaster",
+        "business continuity",
+        "bcp",
+        "rto",
+        "rpo",
+        "recovery plan",
+        "recovery time"
+      ],
+      "items": [
+        "INF-19",
+        "DAT-08",
+        "INF-20"
+      ]
+    },
+    {
+      "id": "availability",
+      "keywords": [
+        "uptime",
+        "availability",
+        "sla",
+        "redundan",
+        "failover",
+        "high availability"
+      ],
+      "items": [
+        "INF-05",
+        "INF-07",
+        "INF-20",
+        "OBS-03",
+        "OBS-10"
+      ]
+    },
+    {
+      "id": "incident-response",
+      "keywords": [
+        "incident",
+        "breach",
+        "breach notification",
+        "security event"
+      ],
+      "items": [
+        "SEC-19",
+        "OBS-07",
+        "OBS-09"
+      ]
+    },
+    {
+      "id": "vulnerability-disclosure",
+      "keywords": [
+        "disclosure",
+        "bug bounty",
+        "responsible disclosure",
+        "security contact"
+      ],
+      "items": [
+        "SEC-18"
+      ]
+    },
+    {
+      "id": "retention-deletion",
+      "keywords": [
+        "retention",
+        "deletion",
+        "delete",
+        "disposal",
+        "return of data",
+        "data destruction",
+        "end of contract"
+      ],
+      "items": [
+        "DAT-19",
+        "CMP-05",
+        "DAT-10"
+      ]
+    },
+    {
+      "id": "privacy-gdpr",
+      "keywords": [
+        "gdpr",
+        "privacy",
+        "data subject",
+        "dpa",
+        "sub-processor",
+        "subprocessor",
+        "ccpa",
+        "personal data"
+      ],
+      "items": [
+        "CMP-05",
+        "CMP-09",
+        "CMP-11",
+        "CMP-10"
+      ]
+    },
+    {
+      "id": "data-residency",
+      "keywords": [
+        "residency",
+        "data location",
+        "where is data",
+        "where is customer data",
+        "geograph",
+        "data sovereignty"
+      ],
+      "items": [
+        "CMP-06"
+      ]
+    },
+    {
+      "id": "hipaa-phi",
+      "keywords": [
+        "hipaa",
+        "phi",
+        "baa",
+        "business associate",
+        "protected health",
+        "patient"
+      ],
+      "items": [
+        "CMP-01",
+        "CMP-02",
+        "CMP-03"
+      ]
+    },
+    {
+      "id": "soc2-iso",
+      "keywords": [
+        "soc 2",
+        "soc2",
+        "iso 27001",
+        "iso27001",
+        "certification",
+        "attestation report"
+      ],
+      "items": [
+        "CMP-07",
+        "CMP-08"
+      ]
+    },
+    {
+      "id": "pci",
+      "keywords": [
+        "pci",
+        "cardholder",
+        "card data",
+        "payment card"
+      ],
+      "items": [
+        "PAY-03"
+      ]
+    },
+    {
+      "id": "ai-usage",
+      "keywords": [
+        "artificial intelligence",
+        "machine learning",
+        "llm",
+        "language model",
+        "model training",
+        "generative",
+        "ai"
+      ],
+      "items": [
+        "AIF-01",
+        "AIF-02",
+        "AIF-03",
+        "AIF-10"
+      ]
+    },
+    {
+      "id": "application-security",
+      "keywords": [
+        "owasp",
+        "injection",
+        "xss",
+        "csrf",
+        "input validation",
+        "sanitiz",
+        "cross-site",
+        "secure coding"
+      ],
+      "items": [
+        "SEC-05",
+        "SEC-06",
+        "SEC-07",
+        "DAT-11",
+        "SEC-08"
+      ]
+    },
+    {
+      "id": "malware-uploads",
+      "keywords": [
+        "malware",
+        "antivirus",
+        "anti-virus",
+        "file upload",
+        "virus"
+      ],
+      "items": [
+        "SEC-09"
+      ]
+    },
+    {
+      "id": "network-security",
+      "keywords": [
+        "firewall",
+        "cors",
+        "security header",
+        "waf",
+        "ddos",
+        "rate limit",
+        "brute force",
+        "brute-force"
+      ],
+      "items": [
+        "SEC-10",
+        "SEC-11",
+        "IDN-06",
+        "API-05",
+        "SEC-20"
+      ]
+    },
+    {
+      "id": "environment-separation",
+      "keywords": [
+        "separate environment",
+        "production data",
+        "test data",
+        "staging",
+        "non-production",
+        "development environment"
+      ],
+      "items": [
+        "INF-01",
+        "TST-06"
+      ]
+    },
+    {
+      "id": "configuration-management",
+      "keywords": [
+        "infrastructure as code",
+        "configuration management",
+        "hardening",
+        "baseline configuration"
+      ],
+      "items": [
+        "INF-02",
+        "INF-21"
+      ]
+    },
+    {
+      "id": "monitoring-oncall",
+      "keywords": [
+        "monitor",
+        "alerting",
+        "on-call",
+        "24/7",
+        "24x7",
+        "intrusion detection",
+        "uptime monitoring"
+      ],
+      "items": [
+        "OBS-02",
+        "OBS-04",
+        "OBS-07",
+        "OBS-03"
+      ]
+    },
+    {
+      "id": "accessibility",
+      "keywords": [
+        "accessib",
+        "wcag",
+        "vpat",
+        "section 508"
+      ],
+      "items": [
+        "CMP-12",
+        "UXP-08"
+      ]
+    },
+    {
+      "id": "api-security",
+      "keywords": [
+        "api key",
+        "api security",
+        "api versioning",
+        "rest api",
+        "webhook",
+        "api rate",
+        "api authentication"
+      ],
+      "items": [
+        "API-03",
+        "API-04",
+        "API-05",
+        "API-01",
+        "API-02"
+      ]
+    },
+    {
+      "id": "endpoint-security",
+      "keywords": [
+        "laptop",
+        "endpoint",
+        "device management",
+        "mdm",
+        "full disk",
+        "lost device",
+        "stolen"
+      ],
+      "items": [
+        "SEC-19",
+        "OPS-05"
+      ]
+    },
+    {
+      "id": "vendor-management",
+      "keywords": [
+        "vendor",
+        "supplier",
+        "third party risk",
+        "third-party risk",
+        "subcontractor"
+      ],
+      "items": [
+        "CMP-02",
+        "CMP-11",
+        "API-09"
+      ]
+    },
+    {
+      "id": "key-person-risk",
+      "keywords": [
+        "key person",
+        "bus factor",
+        "continuity of staff",
+        "single point of failure"
+      ],
+      "items": [
+        "OPS-05",
+        "OPS-04"
+      ]
+    },
+    {
+      "id": "cost-and-abuse",
+      "keywords": [
+        "abuse",
+        "spam",
+        "fraud",
+        "bot"
+      ],
+      "items": [
+        "SEC-20",
+        "INF-18"
+      ]
+    }
+  ]
+}
