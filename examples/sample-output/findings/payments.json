@@ -1,0 +1,23 @@
+{
+  "domain": "payments",
+  "items": [
+    {
+      "id": "PAY-01",
+      "status": "fail",
+      "summary": "The charge call has no idempotency key, so a retry or double click charges the card twice.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:41"
+      ],
+      "fix": "Send an Idempotency-Key derived from the order, and record attempts in a table with a unique constraint."
+    },
+    {
+      "id": "PAY-04",
+      "status": "fail",
+      "summary": "Charge state is whatever the synchronous call returned. No webhook handler exists, so refunds, disputes and async failures are invisible.",
+      "evidence": [
+        "searched: webhook|stripe-signature"
+      ],
+      "fix": "Add a signature-verified webhook endpoint and treat it as the source of truth."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "ai-consultant",
+  "description": "Open-source IT consultant for founders: audit a vibe-coded app against a production-readiness checklist.",
+  "owner": {
+    "name": "AI-Consultant contributors",
+    "url": "https://github.com/adibM04/AI-Consultant"
+  },
+  "plugins": [
+    {
+      "name": "ai-consultant",
+      "source": "./",
+      "description": "Production-readiness audit for founders: 170 checks across security, data, billing, compliance, infrastructure and more."
+    }
+  ]
+}

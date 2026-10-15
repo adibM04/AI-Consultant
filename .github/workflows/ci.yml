@@ -1,0 +1,26 @@
+name: ci
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  checklist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validate checklist schema
+        run: python3 scripts/checklist.py validate
+      - name: Generated JSON is up to date
+        run: python3 scripts/checklist.py build --check
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Sample report renders
+        run: python3 scripts/render_report.py --dir examples/sample-output --today 2026-10-15
+      - name: Plugin manifests are valid JSON
+        run: |
+          python3 -c "import json; [json.load(open(f)) for f in ('.claude-plugin/plugin.json', '.claude-plugin/marketplace.json')]"

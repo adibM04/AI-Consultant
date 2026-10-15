@@ -1,0 +1,1991 @@
+{
+  "tags": [
+    "ai",
+    "api",
+    "b2b",
+    "cards",
+    "email",
+    "enterprise",
+    "eu",
+    "files",
+    "i18n",
+    "integrations",
+    "multi-tenant",
+    "payments",
+    "phi",
+    "pii",
+    "subscriptions",
+    "usage-billing",
+    "webhooks"
+  ],
+  "roles": [
+    "architect",
+    "backend-engineer",
+    "compliance",
+    "devops",
+    "finance",
+    "frontend-engineer",
+    "legal",
+    "qa",
+    "security",
+    "senior-engineer",
+    "tech-lead"
+  ],
+  "domains": [
+    {
+      "domain": "ai-features",
+      "title": "AI features inside your product",
+      "summary": "Risks that only exist because your app calls a language model.",
+      "file": "checklist/ai-features.yml",
+      "items": [
+        {
+          "id": "AIF-01",
+          "title": "Prompt injection is handled for every field that reaches a model, including documents, emails, web pages and tool results",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "Trace untrusted text into prompts. Does the model hold tools or data access an attacker could steer? Separate instructions from data, constrain tools, validate outputs."
+        },
+        {
+          "id": "AIF-02",
+          "title": "Customer and patient data that must stay private is kept out of prompts that leave your network, or is covered by contract",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "ai",
+            "pii"
+          ],
+          "evidence": "code",
+          "role": "compliance",
+          "check": "What fields are concatenated into prompts? Provider retention and training terms, zero-data-retention settings, redaction before the call."
+        },
+        {
+          "id": "AIF-03",
+          "title": "A model spend cap exists per customer and per day, so one heavy user cannot run up the bill",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Token budgets, per-tenant quotas, max_tokens on every call, loop and recursion limits in agent code, provider-side hard limits."
+        },
+        {
+          "id": "AIF-04",
+          "title": "Evals run on every prompt or model change, so you notice when answers get worse",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "qa",
+          "check": "A golden dataset with scoring, run in CI or before release. \"We tried it a few times\" is not an eval."
+        },
+        {
+          "id": "AIF-05",
+          "title": "There is a fallback for the afternoon the model provider is down or rate limiting you",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Timeouts, retry with backoff, secondary provider or degraded mode, queueing of non-urgent work."
+        },
+        {
+          "id": "AIF-06",
+          "title": "Model versions are pinned and a migration path exists for the day a model is deprecated",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Model identifiers in config not scattered through code, \"latest\" aliases avoided in production, evals ready to compare a replacement."
+        },
+        {
+          "id": "AIF-07",
+          "title": "Prompts and outputs are logged for debugging, minus anything the contract or law says you must not keep",
+          "severity": "medium",
+          "tier": 1,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "LLM trace tooling, redaction, retention period, access control on the logs."
+        },
+        {
+          "id": "AIF-08",
+          "title": "Anything the AI does that cannot be undone (send, pay, delete, publish) needs human approval",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "tech-lead",
+          "check": "Agent tool lists. Any tool with side effects that runs without confirmation, dry-run mode or an undo path."
+        },
+        {
+          "id": "AIF-09",
+          "title": "Model output is treated as untrusted input (never executed, never rendered unescaped, never trusted as authorisation)",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "LLM output going into eval, shell, SQL, innerHTML, redirects, or deciding who may see what."
+        },
+        {
+          "id": "AIF-10",
+          "title": "AI-generated content is identified and reviewed where the law or the customer expects it",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "ai"
+          ],
+          "evidence": "process",
+          "role": "legal",
+          "check": "Disclosure to users, human review for regulated advice (medical, legal, financial), terms that match behaviour."
+        }
+      ]
+    },
+    {
+      "domain": "authorization",
+      "title": "Authorization and tenant isolation",
+      "summary": "Who may do what, and to whose data.",
+      "file": "checklist/authorization.yml",
+      "items": [
+        {
+          "id": "AUT-01",
+          "title": "Every route, API handler, server action and job enforces authorization on the server",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Enumerate all entry points. Flag any that rely on hidden buttons, client-side checks, or \"the frontend never calls that\"."
+        },
+        {
+          "id": "AUT-02",
+          "title": "Object-level checks stop user A reading or editing user B's records by changing an ID",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "For each route taking an ID, trace whether the query is scoped by owner or tenant, or checked after fetch. Sequential integer IDs make this worse. Report the specific routes."
+        },
+        {
+          "id": "AUT-03",
+          "title": "Tenant isolation is enforced centrally (scoped queries, row-level security or per-tenant schema), not by remembering a WHERE clause",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "multi-tenant"
+          ],
+          "evidence": "code",
+          "role": "architect",
+          "check": "Look for a single choke point (RLS policies, a tenant-scoped repository layer). Count raw queries that bypass it. Check caches, search indexes, file paths and exports are tenant-keyed too."
+        },
+        {
+          "id": "AUT-04",
+          "title": "Background jobs, exports, webhooks and emails carry and re-check tenant context",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "multi-tenant"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Job payloads include tenant ID and the worker scopes by it. Shared caches keyed without tenant are a finding."
+        },
+        {
+          "id": "AUT-05",
+          "title": "Roles and permissions go deeper than \"admin\" and \"everyone else\"",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "architect",
+          "check": "Is there a permission model (roles, scopes, resource-level grants)? Are checks written against permissions, not role names scattered through the code?"
+        },
+        {
+          "id": "AUT-06",
+          "title": "Admin and internal endpoints are separated from the public surface and protected independently",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Admin routes behind their own authentication, ideally network-restricted. Check for debug, seed, or \"make me admin\" endpoints left in."
+        },
+        {
+          "id": "AUT-07",
+          "title": "Support \"log in as this user\" exists, is restricted, time-boxed and audit-logged on every use",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "Impersonation requires a privileged role, shows a banner, blocks sensitive actions (password change, payment), and writes an immutable audit record with actor, target, reason, time."
+        },
+        {
+          "id": "AUT-08",
+          "title": "Mass assignment is prevented; clients cannot set role, tenant, price or owner fields",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Handlers that spread request bodies straight into ORM create/update calls."
+        }
+      ]
+    },
+    {
+      "domain": "compliance",
+      "title": "Compliance, privacy and legal",
+      "summary": "What the contracts, regulators and auditors will ask you to prove.",
+      "file": "checklist/compliance.yml",
+      "items": [
+        {
+          "id": "CMP-01",
+          "title": "HIPAA obligations are met for any system that stores or processes patient data (safeguards, minimum necessary, breach process)",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "phi"
+          ],
+          "evidence": "process",
+          "role": "compliance",
+          "check": "Identify every place PHI is stored, logged, emailed or sent to a third party. Encryption, access controls, audit logging, risk assessment and breach notification plan. A privacy or security officer must sign off."
+        },
+        {
+          "id": "CMP-02",
+          "title": "A signed BAA exists with every vendor that touches PHI, including cloud, email, monitoring and the AI model provider",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "phi"
+          ],
+          "evidence": "process",
+          "role": "compliance",
+          "check": "List every third-party SDK and API called with patient data (see package manifests, env vars). Ask for the signed agreement for each. Error trackers and analytics are commonly missed."
+        },
+        {
+          "id": "CMP-03",
+          "title": "Audit trails record who viewed a sensitive record, not only who changed it",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "phi",
+            "pii"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Read-access logging on sensitive entities, immutable storage, searchable by patient/user and by actor."
+        },
+        {
+          "id": "CMP-04",
+          "title": "A general audit log records security-relevant actions (login, permission change, export, delete, admin action) immutably",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Append-only audit table or stream, actor, target, action, timestamp, IP, and tenant visibility of their own log."
+        },
+        {
+          "id": "CMP-05",
+          "title": "GDPR deletion and access requests reach every table, search index, cache, log and backup (with a stated expiry for backups)",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "eu"
+          ],
+          "evidence": "code",
+          "role": "compliance",
+          "check": "Find or design a single \"delete this person\" procedure and enumerate every store holding personal data. Third-party processors must be included."
+        },
+        {
+          "id": "CMP-06",
+          "title": "Data residency commitments (for example \"EU only\") are enforced by infrastructure, including backups, logs and sub-processors",
+          "severity": "high",
+          "tier": 3,
+          "when": [
+            "eu",
+            "enterprise"
+          ],
+          "evidence": "config",
+          "role": "architect",
+          "check": "Region settings for database, storage, queues, email, analytics, error tracking, AI provider."
+        },
+        {
+          "id": "CMP-07",
+          "title": "SOC 2 (or equivalent) is underway: policies, evidence collection, and a chosen auditor",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "process",
+          "role": "compliance",
+          "check": "Compliance automation tool in use, written policies, evidence of controls. This cannot be satisfied from the codebase."
+        },
+        {
+          "id": "CMP-08",
+          "title": "Access to production systems is reviewed quarterly and the review is signed off",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "process",
+          "role": "compliance",
+          "check": "Dated review records listing who has access to what and who approved."
+        },
+        {
+          "id": "CMP-09",
+          "title": "The terms of service and privacy policy match what the code actually collects, shares and retains",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "legal",
+          "check": "Compare the policy text to analytics, trackers, third-party SDKs, stored fields, and retention behaviour. Flag mismatches for a lawyer."
+        },
+        {
+          "id": "CMP-10",
+          "title": "Cookie and tracker consent is implemented where required",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "eu"
+          ],
+          "evidence": "code",
+          "role": "legal",
+          "check": "Analytics and ad scripts load only after consent. Consent is recorded."
+        },
+        {
+          "id": "CMP-11",
+          "title": "A DPA template and sub-processor list are available for business customers",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "b2b",
+            "pii"
+          ],
+          "evidence": "process",
+          "role": "legal",
+          "check": "Public sub-processor page that matches the third-party services used in the code."
+        },
+        {
+          "id": "CMP-12",
+          "title": "Accessibility conformance (WCAG 2.1 AA) is assessed and documented where contracts require it",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "process",
+          "role": "qa",
+          "check": "Automated audit (axe/Lighthouse) results plus a manual pass, and a VPAT or conformance statement if buyers ask."
+        }
+      ]
+    },
+    {
+      "domain": "data",
+      "title": "Data model, databases and data handling",
+      "summary": "The schema, the migrations, the backups, and what happens at 5 million rows.",
+      "file": "checklist/data.yml",
+      "items": [
+        {
+          "id": "DAT-01",
+          "title": "The schema was designed (keys, foreign keys, constraints, types), not improvised table by table",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Review schema and migrations. Missing foreign keys, NOT NULL, unique constraints, JSON blobs holding relational data, duplicated columns across tables, stringly-typed enums."
+        },
+        {
+          "id": "DAT-02",
+          "title": "Migrations are versioned, run forward in CI and have a rollback path",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "A migration tool in use (not \"sync schema on boot\"), down migrations or a documented expand/contract approach, and migrations run in the deploy pipeline."
+        },
+        {
+          "id": "DAT-03",
+          "title": "Migrations avoid long table locks on large tables (concurrent index builds, batched backfills, expand then contract)",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Look for ALTER TABLE adding NOT NULL with default, non-concurrent CREATE INDEX, and in-migration data backfills on big tables."
+        },
+        {
+          "id": "DAT-04",
+          "title": "Indexes exist for real query paths (filters, joins, sorts, foreign keys)",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Match WHERE/ORDER BY/JOIN columns in the code to indexes in the schema. Flag foreign keys without indexes and unbounded table scans."
+        },
+        {
+          "id": "DAT-05",
+          "title": "N+1 queries and unbounded result sets are controlled",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Loops that query per row, ORM lazy loading in list endpoints, endpoints that return every row."
+        },
+        {
+          "id": "DAT-06",
+          "title": "Connection pooling is configured so a traffic spike cannot exhaust the database",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Pool size settings, a pooler (PgBouncer, RDS Proxy, provider pooler) for serverless or multi-instance deployments, sensible timeouts."
+        },
+        {
+          "id": "DAT-07",
+          "title": "Automated backups run at least nightly",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Managed database backup settings, or backup jobs in IaC. If neither is visible in the repo, mark unknown and ask the founder to show the console setting."
+        },
+        {
+          "id": "DAT-08",
+          "title": "A restore from backup has been performed and timed, and the steps are written down",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Look for a restore runbook or drill record. Without one the status is unknown at best."
+        },
+        {
+          "id": "DAT-09",
+          "title": "Point-in-time recovery is enabled for the database",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "WAL archiving or managed PITR setting with a retention window long enough to notice a bad delete."
+        },
+        {
+          "id": "DAT-10",
+          "title": "Deletes of user-visible records are soft (recoverable) or otherwise reversible",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Hard deletes in handlers for business records. Also check that every query excludes soft-deleted rows, and that unique constraints survive re-creation."
+        },
+        {
+          "id": "DAT-11",
+          "title": "All input is validated on the server with a schema, not only in the form",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "A validation layer (zod, pydantic, DRF serializers, etc.) at every write entry point, with length, type and range limits."
+        },
+        {
+          "id": "DAT-12",
+          "title": "Timestamps are stored in UTC with the user's zone kept separately, and scheduled work respects it",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "timestamp without time zone, local-time Date parsing, reminders computed in server local time, DST handling."
+        },
+        {
+          "id": "DAT-13",
+          "title": "Text handling survives apostrophes, accents, emoji and right-to-left scripts in every field",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "UTF-8 (utf8mb4) end to end, no ASCII-only regex name validation, no length truncation by bytes, no naive SQL string building. Check PDFs and emails too."
+        },
+        {
+          "id": "DAT-14",
+          "title": "Money is stored as integer minor units or fixed-point decimals with an explicit currency, never floats",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "float/double/Number columns or JS arithmetic on prices. Currency column present. Rounding rule defined in one place."
+        },
+        {
+          "id": "DAT-15",
+          "title": "The data model can absorb a customer's \"one small change\" (per-tenant settings, custom fields, plan variants) without a rewrite",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "architect",
+          "check": "Hard-coded plan names and tenant-specific if-statements in code are warning signs. Is configuration data-driven?"
+        },
+        {
+          "id": "DAT-16",
+          "title": "List endpoints use pagination that stays fast and correct deep into the result set",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "OFFSET pagination on large tables, no max page size, no stable sort key. Cursor/keyset pagination is the fix."
+        },
+        {
+          "id": "DAT-17",
+          "title": "Customers can export their data in a usable format without engineering help",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "CSV/JSON export, run as a background job for large data, tenant-scoped, protected against CSV formula injection."
+        },
+        {
+          "id": "DAT-18",
+          "title": "Imports validate, report row-level errors and survive odd encodings, delimiters and huge files",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Streaming parse, encoding detection, BOM handling, row limits, partial-failure reporting, dry-run."
+        },
+        {
+          "id": "DAT-19",
+          "title": "Retention rules exist and code actually deletes what the contract and privacy policy say it will",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "pii"
+          ],
+          "evidence": "code",
+          "role": "compliance",
+          "check": "Scheduled purge jobs for logs, uploads, deleted accounts and inactive data. Compare to the stated retention period in the privacy policy."
+        }
+      ]
+    },
+    {
+      "domain": "identity",
+      "title": "Identity, login and sessions",
+      "summary": "Who is this user, can an attacker become them, and can you cut them off.",
+      "file": "checklist/identity.yml",
+      "items": [
+        {
+          "id": "IDN-01",
+          "title": "Login and signup handle plus-addressing, case, Unicode and whitespace in emails consistently",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Find where emails are normalised. Same normalisation on signup, login, reset and invite? Unique index on the normalised value? Does \"a+b@x.com\" survive validation and email delivery?"
+        },
+        {
+          "id": "IDN-02",
+          "title": "Password reset and magic links expire, work once, and are stored hashed",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Look for token expiry, single-use invalidation, hashed storage, invalidation on password change, and no token in logs or referrer-leaking URLs."
+        },
+        {
+          "id": "IDN-03",
+          "title": "Passwords hashed with a modern slow algorithm (argon2id, scrypt, bcrypt)",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Grep for md5/sha1/sha256 used on passwords, plaintext columns, home-made crypto. Provider-delegated auth (Auth0, Clerk, Supabase) is a pass."
+        },
+        {
+          "id": "IDN-04",
+          "title": "MFA is available, and there is a recovery path for users who lose their device",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "TOTP/WebAuthn enrolment, recovery codes, and an identity-verified reset path that does not bypass MFA with a single email click."
+        },
+        {
+          "id": "IDN-05",
+          "title": "Sessions time out (idle and absolute) and all sessions for one user can be revoked",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Session or JWT lifetime. Stateless JWTs with no revocation list and a 30-day expiry fail this. Revocation on password change and on user disable."
+        },
+        {
+          "id": "IDN-06",
+          "title": "Login, signup, reset and MFA endpoints are rate limited per account and per IP",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Find rate-limiting middleware or provider config and confirm it covers auth routes, not just the API. In-memory limiters fail when there is more than one instance."
+        },
+        {
+          "id": "IDN-07",
+          "title": "Lockout and throttling stop attackers without letting them lock out real users at will",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Progressive delays or captcha beat hard lockout. If hard lockout exists, is there a self-service unlock, and can an attacker lock a known victim out indefinitely?"
+        },
+        {
+          "id": "IDN-08",
+          "title": "Signup, login and reset responses do not reveal whether an account exists",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Compare responses and timing for known and unknown emails on reset and login."
+        },
+        {
+          "id": "IDN-09",
+          "title": "Email is verified before it is trusted for access, invites or account linking",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Social login or SSO that links to an existing account by unverified email enables account takeover. Check the linking logic."
+        },
+        {
+          "id": "IDN-10",
+          "title": "SSO via OIDC is available for customers who require it",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "OIDC login per tenant, enforced-SSO setting that disables password login for that tenant, and just-in-time provisioning rules."
+        },
+        {
+          "id": "IDN-11",
+          "title": "SAML is supported, with per-tenant configuration and signed-assertion validation",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "Library-based SAML (not hand-rolled XML parsing), signature validation, clock skew, certificate rotation, IdP-initiated flow decision."
+        },
+        {
+          "id": "IDN-12",
+          "title": "SCIM provisioning deactivates a user's access the moment IT offboards them",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "SCIM Users/Groups endpoints, deprovisioning that also kills sessions, API keys and tokens, not just a flag nobody checks."
+        }
+      ]
+    },
+    {
+      "domain": "infrastructure",
+      "title": "Infrastructure, deployment and background work",
+      "summary": "Getting code to production safely, keeping it up, and running work off the request path.",
+      "file": "checklist/infrastructure.yml",
+      "items": [
+        {
+          "id": "INF-01",
+          "title": "Dev, staging and production are separate and configured alike",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Separate databases, credentials and domains per environment. Env-specific behaviour driven by config, not code branches. Production data never used in dev."
+        },
+        {
+          "id": "INF-02",
+          "title": "Infrastructure is defined as code, so the setup does not live in one person's memory",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Terraform/Pulumi/CDK/compose/platform config files. List anything the repo implies exists but does not define."
+        },
+        {
+          "id": "INF-03",
+          "title": "A deploy pipeline runs tests, linting and type checks before anything reaches customers",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "CI workflow files. Branch protection requiring green checks cannot be seen from the repo, so ask. Deploys from a laptop are a finding."
+        },
+        {
+          "id": "INF-04",
+          "title": "Rollback is one click or one command and has been rehearsed",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Versioned artifacts or images, platform rollback feature, and a rule for database changes that are not backwards-compatible."
+        },
+        {
+          "id": "INF-05",
+          "title": "Deploys are zero-downtime (health checks, rolling or blue/green, graceful shutdown, backwards-compatible schema changes)",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Readiness/liveness endpoints, SIGTERM handling, deploy strategy settings."
+        },
+        {
+          "id": "INF-06",
+          "title": "Feature flags let you ship code without shipping the feature",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "A flag system and a kill switch for risky features. Flags have owners and are removed once launched."
+        },
+        {
+          "id": "INF-07",
+          "title": "Autoscaling or enough headroom exists for the predictable spike",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Scaling policies, concurrency limits, serverless cold start and connection concerns."
+        },
+        {
+          "id": "INF-08",
+          "title": "Static assets are served through a CDN and cached with sensible headers",
+          "severity": "low",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "CDN config, cache-control headers, fingerprinted asset names, regional latency for target markets."
+        },
+        {
+          "id": "INF-09",
+          "title": "DNS, TLS certificates and domain registration auto-renew and expiries are monitored",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Managed certificates or ACME renewal with alerting, registrar auto-renew, registrar account owned by the company."
+        },
+        {
+          "id": "INF-10",
+          "title": "Slow work (email, reports, AI calls, imports) runs on a background queue, not in the request",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Long synchronous calls inside HTTP handlers, request timeouts shorter than the work, fire-and-forget promises that vanish on restart."
+        },
+        {
+          "id": "INF-11",
+          "title": "Outbound calls have timeouts and retries with exponential backoff and jitter",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "HTTP clients with no timeout, retry loops with no cap or delay, retries on non-idempotent calls."
+        },
+        {
+          "id": "INF-12",
+          "title": "Jobs that exhaust their retries land in a dead-letter queue that someone is alerted about",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "backend-engineer",
+          "check": "Queue config with max attempts and a DLQ, tooling to inspect and replay."
+        },
+        {
+          "id": "INF-13",
+          "title": "Scheduled jobs run exactly once even with multiple servers (leader election, locks or a managed scheduler)",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "node-cron or in-process schedulers inside the web app that will double-fire at two instances."
+        },
+        {
+          "id": "INF-14",
+          "title": "Caching has a stated invalidation strategy and cannot serve one user's data to another",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Cache keys including tenant and user where relevant, TTLs, invalidation on writes, CDN caching of authenticated responses."
+        },
+        {
+          "id": "INF-15",
+          "title": "SPF, DKIM and DMARC are configured for the sending domain",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "email"
+          ],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Repo cannot show DNS unless IaC holds it. Ask for or suggest a dig/mail-tester check on the live domain. Transactional mail should use a separate subdomain from marketing mail."
+        },
+        {
+          "id": "INF-16",
+          "title": "Bounces and spam complaints are handled and suppress further sending",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "email"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Email provider webhooks update a suppression list. Password reset still works for non-suppressed addresses."
+        },
+        {
+          "id": "INF-17",
+          "title": "Storage lifecycle rules remove temp files, old exports and stale artifacts",
+          "severity": "low",
+          "tier": 2,
+          "when": [
+            "files"
+          ],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Bucket lifecycle policies, log retention, orphaned upload cleanup."
+        },
+        {
+          "id": "INF-18",
+          "title": "Cost alerts and budgets exist, including per-service caps for pay-per-use APIs, so a runaway loop is caught the same day",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Cloud billing alarms, provider spend limits, and per-key caps on AI and email APIs."
+        },
+        {
+          "id": "INF-19",
+          "title": "A disaster recovery plan is written down and has been exercised at least once",
+          "severity": "high",
+          "tier": 3,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "RTO and RPO stated, steps documented, last drill dated."
+        },
+        {
+          "id": "INF-20",
+          "title": "A second region or failover exists if contracts promise uptime a single region cannot deliver",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "config",
+          "role": "architect",
+          "check": "Compare the SLA in contracts to the architecture. Do not recommend multi-region unless a promise requires it."
+        },
+        {
+          "id": "INF-21",
+          "title": "Configuration is validated at boot and the app fails fast when a required setting is missing",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "A typed env schema. Silent fallbacks to test keys or localhost in production paths."
+        }
+      ]
+    },
+    {
+      "domain": "integrations",
+      "title": "APIs, webhooks and third-party integrations",
+      "summary": "What you expose, what you consume, and what breaks when either side changes.",
+      "file": "checklist/integrations.yml",
+      "items": [
+        {
+          "id": "API-01",
+          "title": "Inbound webhooks verify signatures, reject replays and are processed idempotently",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "webhooks"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "Raw-body signature verification, timestamp tolerance, event ID dedupe table."
+        },
+        {
+          "id": "API-02",
+          "title": "Outbound webhooks retry with backoff and keep a delivery log customers can inspect and replay",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "webhooks",
+            "api"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Delivery attempts stored, signed payloads, disabling of endpoints that fail for days, SSRF protection on customer URLs."
+        },
+        {
+          "id": "API-03",
+          "title": "The public API is versioned so you can change it without breaking customer integrations",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "api"
+          ],
+          "evidence": "code",
+          "role": "architect",
+          "check": "URL or header versioning, deprecation policy, changelog."
+        },
+        {
+          "id": "API-04",
+          "title": "Customers can create, scope, rotate and revoke their own API keys, and keys are stored hashed",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "api"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Key management UI/API, last-used timestamp, per-key scopes, prefix shown once."
+        },
+        {
+          "id": "API-05",
+          "title": "API rate limits protect you without blocking legitimate integrations",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "api"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Per-key and per-tenant limits, Retry-After headers, documented quotas, separate limits for expensive endpoints."
+        },
+        {
+          "id": "API-06",
+          "title": "Parsing third-party responses tolerates unexpected shape changes and fails loudly, not silently",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Schema validation on external responses, alerts on parse failures, pinned API versions where the vendor allows."
+        },
+        {
+          "id": "API-07",
+          "title": "OAuth tokens for connected accounts refresh automatically, and refresh failure is handled and surfaced",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "integrations"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Refresh-token flow, concurrency-safe refresh, re-authorisation prompt for users, tokens encrypted at rest."
+        },
+        {
+          "id": "API-08",
+          "title": "A sandbox lets customers test their integration without touching real data",
+          "severity": "low",
+          "tier": 3,
+          "when": [
+            "api"
+          ],
+          "evidence": "process",
+          "role": "architect",
+          "check": "Test-mode keys and isolated data."
+        },
+        {
+          "id": "API-09",
+          "title": "Every outbound third-party call has a timeout, a circuit breaker or fallback, and an owner for when the vendor is down",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "HTTP client defaults, failure handling in user-facing paths, graceful degradation of non-critical vendors (analytics, chat widgets)."
+        }
+      ]
+    },
+    {
+      "domain": "maintainability",
+      "title": "Code health and team practices",
+      "summary": "Whether the next human, or the next AI session, can safely change this code.",
+      "file": "checklist/maintainability.yml",
+      "items": [
+        {
+          "id": "MNT-01",
+          "title": "The code is readable by a human who did not write it, with consistent structure and naming",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "senior-engineer",
+          "check": "Sample several modules. Inconsistent patterns across files, god functions, magic numbers, comments that contradict code."
+        },
+        {
+          "id": "MNT-02",
+          "title": "Every change gets a human code review before merge",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "senior-engineer",
+          "check": "Branch protection and PR history. Repos with direct pushes to main and AI-authored commits that nobody read are a finding."
+        },
+        {
+          "id": "MNT-03",
+          "title": "A branching strategy lets two people work without overwriting each other",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "tech-lead",
+          "check": "Branch naming, PR flow, release tagging, and a documented convention in CONTRIBUTING."
+        },
+        {
+          "id": "MNT-04",
+          "title": "Dependencies are upgraded on a regular cadence, and nothing is two major versions behind",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "senior-engineer",
+          "check": "Compare manifests to latest releases. Automated update PRs enabled."
+        },
+        {
+          "id": "MNT-05",
+          "title": "The framework and runtime versions still receive security patches",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "senior-engineer",
+          "check": "Node, Python, framework and database versions against vendor end-of-life dates."
+        },
+        {
+          "id": "MNT-06",
+          "title": "Dead code, abandoned files and leftovers from the AI's earlier attempts have been deleted",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "senior-engineer",
+          "check": "Unused exports, unreferenced files, commented-out blocks, v1/v2/old/backup filenames, duplicate implementations of the same helper."
+        },
+        {
+          "id": "MNT-07",
+          "title": "No single file has grown into an unreviewable monolith",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "senior-engineer",
+          "check": "List the largest files by line count and flag those above roughly 800 lines or with many unrelated responsibilities."
+        },
+        {
+          "id": "MNT-08",
+          "title": "Architecture decisions are written down with their reasons",
+          "severity": "low",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "architect",
+          "check": "docs/adr or equivalent. Why this database, this auth approach, this tenancy model?"
+        },
+        {
+          "id": "MNT-09",
+          "title": "A README gets a new engineer running locally in under an hour",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "senior-engineer",
+          "check": "Follow the README literally. Prerequisites, env vars with an example file, seed data, how to run tests. Note every step that fails or is missing."
+        },
+        {
+          "id": "MNT-10",
+          "title": "Documentation exists for whoever inherits the system (components, data flow, third parties, how to deploy)",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "architect",
+          "check": "System diagram, list of vendors and what each is used for, deployment steps, known sharp edges."
+        },
+        {
+          "id": "MNT-11",
+          "title": "Linting, formatting and type checking are configured and enforced",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "senior-engineer",
+          "check": "ESLint/ruff/mypy/tsc strictness, pre-commit hooks or CI enforcement, count of suppressions (any, ts-ignore, noqa)."
+        },
+        {
+          "id": "MNT-12",
+          "title": "Business rules live in one place each, not duplicated across the frontend, backend and database",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "architect",
+          "check": "Pricing, permission and validation rules re-implemented in several files with subtle differences."
+        }
+      ]
+    },
+    {
+      "domain": "observability",
+      "title": "Observability and incident response",
+      "summary": "Knowing it is broken before your customer does, and knowing what to do next.",
+      "file": "checklist/observability.yml",
+      "items": [
+        {
+          "id": "OBS-01",
+          "title": "Logs are structured, correlated by request ID and searchable in one place",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "devops",
+          "check": "console.log soup vs a logger with levels and JSON output, request/trace IDs, and a log destination that retains history."
+        },
+        {
+          "id": "OBS-02",
+          "title": "Errors are captured and grouped by an error tracker, with release tagging",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Sentry-style SDK in both server and client, source maps uploaded, PII scrubbing, alert rules that avoid 4,000 identical emails."
+        },
+        {
+          "id": "OBS-03",
+          "title": "Uptime and key user journeys are checked from outside your own network",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "External probe on the login page and a core API route. Cannot be seen from the repo unless configured as code."
+        },
+        {
+          "id": "OBS-04",
+          "title": "Alerts page a human, on symptoms that matter, and are tuned until they stop paging for nothing",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Alert definitions with owners and thresholds, a paging tool, and a history of noisy alerts that were fixed."
+        },
+        {
+          "id": "OBS-05",
+          "title": "Dashboards show latency, error rate and throughput for the core flows",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Dashboards as code or links in the README. Metrics emitted by the app."
+        },
+        {
+          "id": "OBS-06",
+          "title": "A single slow request can be traced across every service it touches",
+          "severity": "low",
+          "tier": 3,
+          "when": [],
+          "evidence": "code",
+          "role": "devops",
+          "check": "OpenTelemetry or vendor APM, trace IDs propagated through queues and outbound calls."
+        },
+        {
+          "id": "OBS-07",
+          "title": "There is an on-call rotation, and a named person who picks up",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "tech-lead",
+          "check": "Schedule in a paging tool or a documented rota with escalation. A founder who sleeps with the phone on is a bus factor of one."
+        },
+        {
+          "id": "OBS-08",
+          "title": "Runbooks explain what each alert means and what to do first",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "docs/runbooks or alert annotations linking to steps."
+        },
+        {
+          "id": "OBS-09",
+          "title": "Incidents get blameless postmortems, and the action items are tracked to done",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "tech-lead",
+          "check": "Postmortem folder or tracker with completed follow-ups."
+        },
+        {
+          "id": "OBS-10",
+          "title": "A status page exists so customers check it before they email you",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "process",
+          "role": "devops",
+          "check": "Hosted on separate infrastructure from the app it reports on."
+        }
+      ]
+    },
+    {
+      "domain": "operations",
+      "title": "Operations, support and ownership",
+      "summary": "What the business needs around the code to actually run a product.",
+      "file": "checklist/operations.yml",
+      "items": [
+        {
+          "id": "OPS-01",
+          "title": "An admin panel lets your ops team do routine work without database access",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Internal tooling for looking up users, plans, refunds and data fixes, protected and audit-logged."
+        },
+        {
+          "id": "OPS-02",
+          "title": "Support tooling lets customer success answer questions without pinging engineering",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Read-only account views, activity history, safe resend of emails, linking a customer-visible request ID to logs."
+        },
+        {
+          "id": "OPS-03",
+          "title": "Customers can read a changelog of what changed and when",
+          "severity": "low",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "tech-lead",
+          "check": "Public changelog or release notes, deprecation notices for API customers."
+        },
+        {
+          "id": "OPS-04",
+          "title": "Every account, domain, repository, cloud project and vendor login belongs to the company, not to the person who built the prototype",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "tech-lead",
+          "check": "Ask the founder to list registrar, DNS, cloud, git hosting, payment provider, app stores and email provider with the owning account for each. Personal emails as owner on any of them are a finding."
+        },
+        {
+          "id": "OPS-05",
+          "title": "At least two people can deploy, restore a backup and rotate every credential (bus factor above one)",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "tech-lead",
+          "check": "Who holds the root credentials and the 2FA devices? What happens if one person is unreachable for a week?"
+        },
+        {
+          "id": "OPS-06",
+          "title": "Shared credentials live in a team password manager or secrets store, not in chat, docs or someone's head",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "security",
+          "check": "Look for credentials in README, wiki exports or setup scripts, and ask where the rest live."
+        }
+      ]
+    },
+    {
+      "domain": "payments",
+      "title": "Payments and billing",
+      "summary": "Charging the right amount once, and being able to prove it to finance.",
+      "file": "checklist/payments.yml",
+      "items": [
+        {
+          "id": "PAY-01",
+          "title": "Charge and order creation use idempotency keys so a retry never charges twice",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Idempotency-Key on provider calls, unique constraint on order/payment attempt, safe handling of timeouts after the provider has already charged."
+        },
+        {
+          "id": "PAY-02",
+          "title": "Double-submits (four clicks on \"Pay\") are deduplicated on the server and disabled in the UI",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Server-side dedupe on the write path, not just a disabled button."
+        },
+        {
+          "id": "PAY-03",
+          "title": "Card numbers never touch your servers or database (hosted fields or redirect), keeping PCI scope minimal",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "cards"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "Raw PAN/CVV in requests, logs, DB columns, or analytics events. Stripe Elements / Checkout / equivalent in use."
+        },
+        {
+          "id": "PAY-04",
+          "title": "Provider webhooks verify signatures and are the source of truth for entitlement and payment state",
+          "severity": "critical",
+          "tier": 1,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Signature check with the raw body, replay window, idempotent event handling, and access granted from webhook state, not from the success-page redirect."
+        },
+        {
+          "id": "PAY-05",
+          "title": "Currency, rounding and tax rules are defined for every country sold into",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "finance",
+          "check": "Rounding applied at a single, documented step. Zero-decimal and three-decimal currencies handled. Locale price formatting."
+        },
+        {
+          "id": "PAY-06",
+          "title": "Sales tax and VAT are calculated, collected and reported correctly where required",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "payments"
+          ],
+          "evidence": "process",
+          "role": "finance",
+          "check": "A tax engine or provider tax setting (Stripe Tax, etc.), VAT ID collection for B2B, and registration in the jurisdictions where thresholds are exceeded. Needs an accountant to confirm."
+        },
+        {
+          "id": "PAY-07",
+          "title": "Subscription upgrades, downgrades, pauses, cancellations and proration behave correctly",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "subscriptions"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Plan-change code paths, proration mode, end-of-period vs immediate behaviour, entitlement changes on each transition."
+        },
+        {
+          "id": "PAY-08",
+          "title": "Failed payments are retried on a schedule, customers are emailed (dunning), and access is handled deliberately",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "subscriptions"
+          ],
+          "evidence": "config",
+          "role": "backend-engineer",
+          "check": "Smart-retry or custom schedule, dunning emails, grace period, what happens at final failure."
+        },
+        {
+          "id": "PAY-09",
+          "title": "Refunds, credits and partial refunds work and keep revenue records consistent",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Refund handlers update internal ledger, entitlement and tax. Webhook-driven refunds from the provider dashboard are handled."
+        },
+        {
+          "id": "PAY-10",
+          "title": "Usage metering matches what is billed, to the cent, and can be audited",
+          "severity": "high",
+          "tier": 2,
+          "when": [
+            "usage-billing"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Events are idempotent, late events handled, billing period boundaries in UTC, and a reconciliation between raw usage and invoices."
+        },
+        {
+          "id": "PAY-11",
+          "title": "Invoices carry required fields (legal entity, tax ID, customer PO number) and can be re-issued",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "b2b",
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "finance",
+          "check": "Custom fields on invoices, sequential numbering, PDF generation, credit notes."
+        },
+        {
+          "id": "PAY-12",
+          "title": "Annual and custom-term contracts can be represented without code changes",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "b2b",
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "architect",
+          "check": "Prices, terms and discounts as data. Manual invoicing path for enterprise deals."
+        },
+        {
+          "id": "PAY-13",
+          "title": "Finance can reconcile revenue reports against the payment provider and the bank",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "payments"
+          ],
+          "evidence": "process",
+          "role": "finance",
+          "check": "Exports with provider IDs, ledger of every money movement, MRR definition written down."
+        }
+      ]
+    },
+    {
+      "domain": "security",
+      "title": "Application and supply-chain security",
+      "summary": "Secrets, dependencies, injection, uploads and the OWASP basics.",
+      "file": "checklist/security.yml",
+      "items": [
+        {
+          "id": "SEC-01",
+          "title": "No secrets in source code, git history, client bundles, or committed .env files",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Scan the working tree AND git history (run a secret scanner if available, else grep for key prefixes such as sk_, AKIA, ghp_, xox, private key blocks). Check what ships in the browser bundle (NEXT_PUBLIC_, VITE_ variables)."
+        },
+        {
+          "id": "SEC-02",
+          "title": "Every key an AI assistant ever pasted into a config file, chat or prompt has been rotated",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "security",
+          "check": "Cannot be verified from code. Ask the founder when keys were last rotated and whether any were shared with an AI tool. Any key that appeared in a commit, an AI chat history or a screenshot should be treated as burned."
+        },
+        {
+          "id": "SEC-03",
+          "title": "Every installed package exists, is the one intended, and is not a look-alike (hallucinated or typosquatted names)",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Review manifests and lockfiles. For each unfamiliar dependency check name spelling, publisher, age, download count and repository link. Flag packages with a handful of downloads that do something trivial."
+        },
+        {
+          "id": "SEC-04",
+          "title": "Dependencies are scanned automatically and the lockfile is committed",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Dependabot/Renovate, npm audit / pip-audit / OSV in CI, lockfile present, and install uses the lockfile (npm ci)."
+        },
+        {
+          "id": "SEC-05",
+          "title": "User input is sanitised or encoded everywhere it is rendered, preventing XSS",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "dangerouslySetInnerHTML, v-html, innerHTML, |safe, unescaped template output, markdown rendering without a sanitiser, user-supplied URLs in href."
+        },
+        {
+          "id": "SEC-06",
+          "title": "Database access is parameterised; no SQL, NoSQL or command injection paths",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "String-built SQL, raw query helpers with interpolation, exec/system calls with user input, unsanitised filter objects passed to Mongo."
+        },
+        {
+          "id": "SEC-07",
+          "title": "State-changing requests are protected against CSRF",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "CSRF tokens or SameSite cookies plus origin checks, for cookie-authenticated apps. Bearer-token-only APIs are lower risk."
+        },
+        {
+          "id": "SEC-08",
+          "title": "SSRF, open redirects and path traversal are blocked",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Server-side fetch of user-supplied URLs (webhooks, image import, link preview) without an allowlist or private-range block. Redirect targets taken from query parameters. File paths built from input."
+        },
+        {
+          "id": "SEC-09",
+          "title": "File uploads are type-checked, size-limited, malware-scanned and stored where they cannot execute",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "files"
+          ],
+          "evidence": "code",
+          "role": "security",
+          "check": "Content sniffing not just extension, size cap, random storage names, private bucket with signed URLs, no upload inside the web root, SVG and HTML served with safe headers, virus scanning for B2B."
+        },
+        {
+          "id": "SEC-10",
+          "title": "CORS is restricted to known origins (not \"*\" with credentials or reflected origin)",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "CORS middleware config and any manual Access-Control headers."
+        },
+        {
+          "id": "SEC-11",
+          "title": "Security headers are set on every response (CSP, HSTS, X-Content-Type-Options, frame protection, referrer policy)",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "security",
+          "check": "Middleware, framework config, or CDN/edge rules. Judge by what is configured, and suggest curl -I against the live site for confirmation."
+        },
+        {
+          "id": "SEC-12",
+          "title": "Data is encrypted in transit everywhere and at rest in databases, buckets and backups",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "TLS-only connections including database and internal services, HTTP redirected, storage encryption flags in IaC or provider settings, field-level encryption for the most sensitive columns."
+        },
+        {
+          "id": "SEC-13",
+          "title": "Everyone and everything, including AI coding agents, holds least-privilege credentials, and none holds production write access by default",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "process",
+          "role": "security",
+          "check": "IAM roles, shared root credentials, database superuser in the app connection string, production credentials in a developer's or agent's local environment. Separate read-only credentials for investigation."
+        },
+        {
+          "id": "SEC-14",
+          "title": "Logs record who did what and never record passwords, tokens, card numbers or other sensitive fields",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Logging of full request bodies, headers (Authorization, Cookie), ORM query logging with bound parameters, error reporters capturing PII. Redaction in place."
+        },
+        {
+          "id": "SEC-15",
+          "title": "Production errors do not leak stack traces, SQL, or internals; debug mode is off",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "DEBUG=true defaults, verbose error handlers, GraphQL introspection and Swagger exposed in production, default admin credentials."
+        },
+        {
+          "id": "SEC-16",
+          "title": "A penetration test has been run by someone independent, and findings fixed",
+          "severity": "high",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "process",
+          "role": "security",
+          "check": "Look for a report or remediation tracker. Otherwise unknown."
+        },
+        {
+          "id": "SEC-17",
+          "title": "There are written, evidence-backed answers to the security questionnaire every enterprise buyer sends",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "enterprise"
+          ],
+          "evidence": "process",
+          "role": "security",
+          "check": "A standard answer set (SIG, CAIQ, or custom) with links to evidence: policies, screenshots, reports."
+        },
+        {
+          "id": "SEC-18",
+          "title": "A vulnerability disclosure process exists (security.txt, a monitored security@ inbox, a response SLA)",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "/.well-known/security.txt, SECURITY.md, and someone who reads the inbox."
+        },
+        {
+          "id": "SEC-19",
+          "title": "There is a documented plan for a stolen laptop or leaked credential (disk encryption, remote wipe, revocation steps)",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "security",
+          "check": "Incident response doc, device management, list of credentials a laptop holds and how to revoke each."
+        },
+        {
+          "id": "SEC-20",
+          "title": "Webhook endpoints, public APIs and forms are protected against automated abuse (bot protection, quotas)",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Signup and contact forms with captcha or proof of work, email-sending endpoints that cannot be used as spam relays."
+        }
+      ]
+    },
+    {
+      "domain": "testing",
+      "title": "Testing and quality assurance",
+      "summary": "Proof that the thing works, written by someone who knows what \"works\" means.",
+      "file": "checklist/testing.yml",
+      "items": [
+        {
+          "id": "TST-01",
+          "title": "Business logic has unit tests that assert real expected behaviour, not just that the code runs",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "qa",
+          "check": "Sample the tests. Tests with no assertions, assertions on mocks of the thing under test, snapshot tests of everything, or tests that were clearly generated from the implementation rather than the requirement."
+        },
+        {
+          "id": "TST-02",
+          "title": "Tests for the money and access paths exist end to end (signup, login, checkout, permission boundaries)",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "qa",
+          "check": "Playwright/Cypress or equivalent covering the flows that make money and the flows that must refuse access."
+        },
+        {
+          "id": "TST-03",
+          "title": "Integration tests cover every third-party API the product depends on, against sandboxes or recorded contracts",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "qa",
+          "check": "Contract tests or a sandbox suite for payments, email, auth provider and any data API."
+        },
+        {
+          "id": "TST-04",
+          "title": "Every fixed bug gets a regression test",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "qa",
+          "check": "Look at recent bug-fix commits for an accompanying test."
+        },
+        {
+          "id": "TST-05",
+          "title": "Load testing has been done at realistic data volume before launch campaigns",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "devops",
+          "check": "k6/Locust scripts or a dated report with the production-like data size."
+        },
+        {
+          "id": "TST-06",
+          "title": "Test and staging data resembles production without containing production personal data",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "pii"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Seed scripts, anonymisation of copies. Production dumps in dev environments are a finding."
+        },
+        {
+          "id": "TST-07",
+          "title": "Tests run in CI on every change and a failing test blocks merge",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "CI config runs the suite. Skipped tests (.skip, xfail, test.todo) counted and listed."
+        },
+        {
+          "id": "TST-08",
+          "title": "The app has been tested on old devices, slow networks and the browsers your customers actually use",
+          "severity": "low",
+          "tier": 3,
+          "when": [
+            "b2b"
+          ],
+          "evidence": "process",
+          "role": "qa",
+          "check": "Browserslist and test matrix versus the analytics of real customers."
+        }
+      ]
+    },
+    {
+      "domain": "ux",
+      "title": "Product experience",
+      "summary": "What the customer actually sees when things are slow, wrong, empty or in another language.",
+      "file": "checklist/ux.yml",
+      "items": [
+        {
+          "id": "UXP-01",
+          "title": "Every screen has designed empty, loading and error states",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Data-fetching components with no loading or error branch, blank screens on empty lists, infinite spinners."
+        },
+        {
+          "id": "UXP-02",
+          "title": "Error messages tell the customer what happened and what to do next, instead of \"something went wrong\"",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Generic catch-all messages, raw exception text in the UI, errors with no recovery action or support reference ID."
+        },
+        {
+          "id": "UXP-03",
+          "title": "Forms keep what people typed when one field fails validation, and show errors next to the field",
+          "severity": "low",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Controlled state vs full page reload, server errors mapped to fields."
+        },
+        {
+          "id": "UXP-04",
+          "title": "Pages and bundles are light enough for hotel wifi and mid-range phones",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Bundle size, image optimisation, blocking requests, no waterfall of sequential fetches, offline/slow-network behaviour on critical flows."
+        },
+        {
+          "id": "UXP-05",
+          "title": "Transactional emails render correctly in the mail clients your customers use",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "email"
+          ],
+          "evidence": "process",
+          "role": "frontend-engineer",
+          "check": "Table-based or tested templating (MJML/React Email), plain-text alternatives, dark mode, test across clients."
+        },
+        {
+          "id": "UXP-06",
+          "title": "Notifications can be turned off per channel and category, and marketing email has a working unsubscribe",
+          "severity": "high",
+          "tier": 1,
+          "when": [
+            "email"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Preference centre, List-Unsubscribe headers, enforcement on send, legal-required footer details."
+        },
+        {
+          "id": "UXP-07",
+          "title": "Destructive actions have confirmation or undo",
+          "severity": "low",
+          "tier": 3,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Delete buttons that act immediately, bulk operations with no preview."
+        },
+        {
+          "id": "UXP-08",
+          "title": "The app is usable by keyboard and screen reader (semantic HTML, labels, focus management, contrast)",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Clickable divs, unlabeled inputs, modal focus traps, missing alt text, colour-only meaning."
+        },
+        {
+          "id": "UXP-09",
+          "title": "Text is translatable, and dates, numbers and currencies are formatted per locale",
+          "severity": "medium",
+          "tier": 3,
+          "when": [
+            "i18n"
+          ],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "Hard-coded strings, concatenated sentences, Intl usage, plural rules, text expansion and RTL layout."
+        },
+        {
+          "id": "UXP-10",
+          "title": "The back button, deep links, refresh and multiple tabs behave as people expect",
+          "severity": "low",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "frontend-engineer",
+          "check": "State kept in URL for filters and steps, no history trapping, safe re-submit after refresh."
+        }
+      ]
+    }
+  ]
+}

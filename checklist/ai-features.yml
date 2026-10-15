@@ -1,0 +1,84 @@
+domain: ai-features
+title: AI features inside your product
+summary: Risks that only exist because your app calls a language model.
+items:
+  - id: AIF-01
+    title: Prompt injection is handled for every field that reaches a model, including documents, emails, web pages and tool results
+    severity: critical
+    tier: 1
+    when: [ai]
+    evidence: code
+    role: security
+    check: Trace untrusted text into prompts. Does the model hold tools or data access an attacker could steer? Separate instructions from data, constrain tools, validate outputs.
+  - id: AIF-02
+    title: Customer and patient data that must stay private is kept out of prompts that leave your network, or is covered by contract
+    severity: critical
+    tier: 1
+    when: [ai, pii]
+    evidence: code
+    role: compliance
+    check: What fields are concatenated into prompts? Provider retention and training terms, zero-data-retention settings, redaction before the call.
+  - id: AIF-03
+    title: A model spend cap exists per customer and per day, so one heavy user cannot run up the bill
+    severity: high
+    tier: 1
+    when: [ai]
+    evidence: code
+    role: backend-engineer
+    check: Token budgets, per-tenant quotas, max_tokens on every call, loop and recursion limits in agent code, provider-side hard limits.
+  - id: AIF-04
+    title: Evals run on every prompt or model change, so you notice when answers get worse
+    severity: high
+    tier: 2
+    when: [ai]
+    evidence: code
+    role: qa
+    check: A golden dataset with scoring, run in CI or before release. "We tried it a few times" is not an eval.
+  - id: AIF-05
+    title: There is a fallback for the afternoon the model provider is down or rate limiting you
+    severity: medium
+    tier: 2
+    when: [ai]
+    evidence: code
+    role: backend-engineer
+    check: Timeouts, retry with backoff, secondary provider or degraded mode, queueing of non-urgent work.
+  - id: AIF-06
+    title: Model versions are pinned and a migration path exists for the day a model is deprecated
+    severity: medium
+    tier: 2
+    when: [ai]
+    evidence: code
+    role: backend-engineer
+    check: Model identifiers in config not scattered through code, "latest" aliases avoided in production, evals ready to compare a replacement.
+  - id: AIF-07
+    title: Prompts and outputs are logged for debugging, minus anything the contract or law says you must not keep
+    severity: medium
+    tier: 1
+    when: [ai]
+    evidence: code
+    role: backend-engineer
+    check: LLM trace tooling, redaction, retention period, access control on the logs.
+  - id: AIF-08
+    title: Anything the AI does that cannot be undone (send, pay, delete, publish) needs human approval
+    severity: critical
+    tier: 1
+    when: [ai]
+    evidence: code
+    role: tech-lead
+    check: Agent tool lists. Any tool with side effects that runs without confirmation, dry-run mode or an undo path.
+  - id: AIF-09
+    title: Model output is treated as untrusted input (never executed, never rendered unescaped, never trusted as authorisation)
+    severity: high
+    tier: 1
+    when: [ai]
+    evidence: code
+    role: security
+    check: LLM output going into eval, shell, SQL, innerHTML, redirects, or deciding who may see what.
+  - id: AIF-10
+    title: AI-generated content is identified and reviewed where the law or the customer expects it
+    severity: medium
+    tier: 2
+    when: [ai]
+    evidence: process
+    role: legal
+    check: Disclosure to users, human review for regulated advice (medical, legal, financial), terms that match behaviour.

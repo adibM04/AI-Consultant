@@ -1,0 +1,87 @@
+{
+  "_note": "What a competent audit of server.js must not pass. Lines refer to server.js.",
+  "must_not_pass": [
+    {
+      "id": "SEC-01",
+      "lines": [
+        11
+      ],
+      "why": "Payment provider key hard-coded in source"
+    },
+    {
+      "id": "IDN-03",
+      "lines": [
+        15,
+        22
+      ],
+      "why": "Passwords hashed with unsalted MD5"
+    },
+    {
+      "id": "IDN-02",
+      "lines": [
+        29
+      ],
+      "why": "Reset token from Math.random, no expiry, no single use"
+    },
+    {
+      "id": "IDN-06",
+      "lines": [
+        19
+      ],
+      "why": "No rate limiting on login"
+    },
+    {
+      "id": "SEC-06",
+      "lines": [
+        16,
+        23,
+        30,
+        35
+      ],
+      "why": "SQL built by string interpolation"
+    },
+    {
+      "id": "AUT-02",
+      "lines": [
+        35
+      ],
+      "why": "Invoice fetched by ID with no ownership check (IDOR)"
+    },
+    {
+      "id": "AUT-01",
+      "lines": [
+        34
+      ],
+      "why": "No authentication on invoice route"
+    },
+    {
+      "id": "SEC-10",
+      "lines": [
+        8
+      ],
+      "why": "CORS allows every origin"
+    },
+    {
+      "id": "DAT-14",
+      "lines": [
+        40
+      ],
+      "why": "Money computed with floating point"
+    },
+    {
+      "id": "PAY-01",
+      "lines": [
+        39
+      ],
+      "why": "Charge has no idempotency key"
+    },
+    {
+      "id": "DAT-11",
+      "lines": [
+        13,
+        20
+      ],
+      "why": "No server-side input validation"
+    }
+  ]
+}

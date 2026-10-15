@@ -1,0 +1,30 @@
+{
+  "domain": "data",
+  "items": [
+    {
+      "id": "DAT-11",
+      "status": "fail",
+      "summary": "Request bodies are used with no validation of type, length or format.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:13",
+        "examples/vibe-coded-app/server.js:20"
+      ],
+      "fix": "Add schema validation (zod or similar) at every write route."
+    },
+    {
+      "id": "DAT-14",
+      "status": "fail",
+      "summary": "The charge total is computed with floating point and a tax multiplier inline.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:40"
+      ],
+      "fix": "Keep prices as integer cents and apply tax and rounding in one tested function."
+    },
+    {
+      "id": "DAT-07",
+      "status": "unknown",
+      "summary": "No backup configuration is visible in the repository.",
+      "question": "Show the database provider's backup setting and the date of the latest backup."
+    }
+  ]
+}

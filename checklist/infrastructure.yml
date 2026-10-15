@@ -1,0 +1,172 @@
+domain: infrastructure
+title: Infrastructure, deployment and background work
+summary: Getting code to production safely, keeping it up, and running work off the request path.
+items:
+  - id: INF-01
+    title: Dev, staging and production are separate and configured alike
+    severity: high
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Separate databases, credentials and domains per environment. Env-specific behaviour driven by config, not code branches. Production data never used in dev.
+  - id: INF-02
+    title: Infrastructure is defined as code, so the setup does not live in one person's memory
+    severity: high
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Terraform/Pulumi/CDK/compose/platform config files. List anything the repo implies exists but does not define.
+  - id: INF-03
+    title: A deploy pipeline runs tests, linting and type checks before anything reaches customers
+    severity: high
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: CI workflow files. Branch protection requiring green checks cannot be seen from the repo, so ask. Deploys from a laptop are a finding.
+  - id: INF-04
+    title: Rollback is one click or one command and has been rehearsed
+    severity: high
+    tier: 2
+    when: []
+    evidence: process
+    role: devops
+    check: Versioned artifacts or images, platform rollback feature, and a rule for database changes that are not backwards-compatible.
+  - id: INF-05
+    title: Deploys are zero-downtime (health checks, rolling or blue/green, graceful shutdown, backwards-compatible schema changes)
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Readiness/liveness endpoints, SIGTERM handling, deploy strategy settings.
+  - id: INF-06
+    title: Feature flags let you ship code without shipping the feature
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: A flag system and a kill switch for risky features. Flags have owners and are removed once launched.
+  - id: INF-07
+    title: Autoscaling or enough headroom exists for the predictable spike
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Scaling policies, concurrency limits, serverless cold start and connection concerns.
+  - id: INF-08
+    title: Static assets are served through a CDN and cached with sensible headers
+    severity: low
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: CDN config, cache-control headers, fingerprinted asset names, regional latency for target markets.
+  - id: INF-09
+    title: DNS, TLS certificates and domain registration auto-renew and expiries are monitored
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: devops
+    check: Managed certificates or ACME renewal with alerting, registrar auto-renew, registrar account owned by the company.
+  - id: INF-10
+    title: Slow work (email, reports, AI calls, imports) runs on a background queue, not in the request
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Long synchronous calls inside HTTP handlers, request timeouts shorter than the work, fire-and-forget promises that vanish on restart.
+  - id: INF-11
+    title: Outbound calls have timeouts and retries with exponential backoff and jitter
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: HTTP clients with no timeout, retry loops with no cap or delay, retries on non-idempotent calls.
+  - id: INF-12
+    title: Jobs that exhaust their retries land in a dead-letter queue that someone is alerted about
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: backend-engineer
+    check: Queue config with max attempts and a DLQ, tooling to inspect and replay.
+  - id: INF-13
+    title: Scheduled jobs run exactly once even with multiple servers (leader election, locks or a managed scheduler)
+    severity: high
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: node-cron or in-process schedulers inside the web app that will double-fire at two instances.
+  - id: INF-14
+    title: Caching has a stated invalidation strategy and cannot serve one user's data to another
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Cache keys including tenant and user where relevant, TTLs, invalidation on writes, CDN caching of authenticated responses.
+  - id: INF-15
+    title: SPF, DKIM and DMARC are configured for the sending domain
+    severity: high
+    tier: 1
+    when: [email]
+    evidence: process
+    role: devops
+    check: Repo cannot show DNS unless IaC holds it. Ask for or suggest a dig/mail-tester check on the live domain. Transactional mail should use a separate subdomain from marketing mail.
+  - id: INF-16
+    title: Bounces and spam complaints are handled and suppress further sending
+    severity: medium
+    tier: 2
+    when: [email]
+    evidence: code
+    role: backend-engineer
+    check: Email provider webhooks update a suppression list. Password reset still works for non-suppressed addresses.
+  - id: INF-17
+    title: Storage lifecycle rules remove temp files, old exports and stale artifacts
+    severity: low
+    tier: 2
+    when: [files]
+    evidence: config
+    role: devops
+    check: Bucket lifecycle policies, log retention, orphaned upload cleanup.
+  - id: INF-18
+    title: Cost alerts and budgets exist, including per-service caps for pay-per-use APIs, so a runaway loop is caught the same day
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: devops
+    check: Cloud billing alarms, provider spend limits, and per-key caps on AI and email APIs.
+  - id: INF-19
+    title: A disaster recovery plan is written down and has been exercised at least once
+    severity: high
+    tier: 3
+    when: []
+    evidence: process
+    role: devops
+    check: RTO and RPO stated, steps documented, last drill dated.
+  - id: INF-20
+    title: A second region or failover exists if contracts promise uptime a single region cannot deliver
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: config
+    role: architect
+    check: Compare the SLA in contracts to the architecture. Do not recommend multi-region unless a promise requires it.
+  - id: INF-21
+    title: Configuration is validated at boot and the app fails fast when a required setting is missing
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: A typed env schema. Silent fallbacks to test keys or localhost in production paths.

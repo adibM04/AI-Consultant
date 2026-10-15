@@ -1,0 +1,9 @@
+{
+  "project": "vibe-coded-fixture",
+  "stage": "launch",
+  "tags": [
+    "b2b",
+    "payments"
+  ],
+  "stack": "Node.js, Express, raw SQL, Stripe"
+}

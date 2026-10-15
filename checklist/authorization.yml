@@ -1,0 +1,68 @@
+domain: authorization
+title: Authorization and tenant isolation
+summary: Who may do what, and to whose data.
+items:
+  - id: AUT-01
+    title: Every route, API handler, server action and job enforces authorization on the server
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Enumerate all entry points. Flag any that rely on hidden buttons, client-side checks, or "the frontend never calls that".
+  - id: AUT-02
+    title: Object-level checks stop user A reading or editing user B's records by changing an ID
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: For each route taking an ID, trace whether the query is scoped by owner or tenant, or checked after fetch. Sequential integer IDs make this worse. Report the specific routes.
+  - id: AUT-03
+    title: Tenant isolation is enforced centrally (scoped queries, row-level security or per-tenant schema), not by remembering a WHERE clause
+    severity: critical
+    tier: 1
+    when: [multi-tenant]
+    evidence: code
+    role: architect
+    check: Look for a single choke point (RLS policies, a tenant-scoped repository layer). Count raw queries that bypass it. Check caches, search indexes, file paths and exports are tenant-keyed too.
+  - id: AUT-04
+    title: Background jobs, exports, webhooks and emails carry and re-check tenant context
+    severity: high
+    tier: 2
+    when: [multi-tenant]
+    evidence: code
+    role: backend-engineer
+    check: Job payloads include tenant ID and the worker scopes by it. Shared caches keyed without tenant are a finding.
+  - id: AUT-05
+    title: Roles and permissions go deeper than "admin" and "everyone else"
+    severity: high
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: architect
+    check: Is there a permission model (roles, scopes, resource-level grants)? Are checks written against permissions, not role names scattered through the code?
+  - id: AUT-06
+    title: Admin and internal endpoints are separated from the public surface and protected independently
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Admin routes behind their own authentication, ideally network-restricted. Check for debug, seed, or "make me admin" endpoints left in.
+  - id: AUT-07
+    title: Support "log in as this user" exists, is restricted, time-boxed and audit-logged on every use
+    severity: high
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: security
+    check: Impersonation requires a privileged role, shows a banner, blocks sensitive actions (password change, payment), and writes an immutable audit record with actor, target, reason, time.
+  - id: AUT-08
+    title: Mass assignment is prevented; clients cannot set role, tenant, price or owner fields
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Handlers that spread request bodies straight into ORM create/update calls.

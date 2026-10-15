@@ -1,0 +1,23 @@
+{
+  "domain": "authorization",
+  "items": [
+    {
+      "id": "AUT-01",
+      "status": "fail",
+      "summary": "No route checks who is calling. There is no authentication middleware at all.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:34"
+      ],
+      "fix": "Add authentication middleware and apply it to every non-public route."
+    },
+    {
+      "id": "AUT-02",
+      "status": "fail",
+      "summary": "GET /invoices/:id returns any invoice to anyone who changes the number in the URL.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:35"
+      ],
+      "fix": "Require auth, then scope the query: WHERE id = $1 AND account_id = $2."
+    }
+  ]
+}

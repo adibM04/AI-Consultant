@@ -1,0 +1,52 @@
+domain: operations
+title: Operations, support and ownership
+summary: What the business needs around the code to actually run a product.
+items:
+  - id: OPS-01
+    title: An admin panel lets your ops team do routine work without database access
+    severity: medium
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: backend-engineer
+    check: Internal tooling for looking up users, plans, refunds and data fixes, protected and audit-logged.
+  - id: OPS-02
+    title: Support tooling lets customer success answer questions without pinging engineering
+    severity: medium
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: backend-engineer
+    check: Read-only account views, activity history, safe resend of emails, linking a customer-visible request ID to logs.
+  - id: OPS-03
+    title: Customers can read a changelog of what changed and when
+    severity: low
+    tier: 2
+    when: []
+    evidence: code
+    role: tech-lead
+    check: Public changelog or release notes, deprecation notices for API customers.
+  - id: OPS-04
+    title: Every account, domain, repository, cloud project and vendor login belongs to the company, not to the person who built the prototype
+    severity: critical
+    tier: 1
+    when: []
+    evidence: process
+    role: tech-lead
+    check: Ask the founder to list registrar, DNS, cloud, git hosting, payment provider, app stores and email provider with the owning account for each. Personal emails as owner on any of them are a finding.
+  - id: OPS-05
+    title: At least two people can deploy, restore a backup and rotate every credential (bus factor above one)
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: tech-lead
+    check: Who holds the root credentials and the 2FA devices? What happens if one person is unreachable for a week?
+  - id: OPS-06
+    title: Shared credentials live in a team password manager or secrets store, not in chat, docs or someone's head
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: security
+    check: Look for credentials in README, wiki exports or setup scripts, and ask where the rest live.

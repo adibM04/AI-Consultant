@@ -1,0 +1,84 @@
+domain: observability
+title: Observability and incident response
+summary: Knowing it is broken before your customer does, and knowing what to do next.
+items:
+  - id: OBS-01
+    title: Logs are structured, correlated by request ID and searchable in one place
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: devops
+    check: console.log soup vs a logger with levels and JSON output, request/trace IDs, and a log destination that retains history.
+  - id: OBS-02
+    title: Errors are captured and grouped by an error tracker, with release tagging
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Sentry-style SDK in both server and client, source maps uploaded, PII scrubbing, alert rules that avoid 4,000 identical emails.
+  - id: OBS-03
+    title: Uptime and key user journeys are checked from outside your own network
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: devops
+    check: External probe on the login page and a core API route. Cannot be seen from the repo unless configured as code.
+  - id: OBS-04
+    title: Alerts page a human, on symptoms that matter, and are tuned until they stop paging for nothing
+    severity: high
+    tier: 2
+    when: []
+    evidence: process
+    role: devops
+    check: Alert definitions with owners and thresholds, a paging tool, and a history of noisy alerts that were fixed.
+  - id: OBS-05
+    title: Dashboards show latency, error rate and throughput for the core flows
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Dashboards as code or links in the README. Metrics emitted by the app.
+  - id: OBS-06
+    title: A single slow request can be traced across every service it touches
+    severity: low
+    tier: 3
+    when: []
+    evidence: code
+    role: devops
+    check: OpenTelemetry or vendor APM, trace IDs propagated through queues and outbound calls.
+  - id: OBS-07
+    title: There is an on-call rotation, and a named person who picks up
+    severity: high
+    tier: 2
+    when: []
+    evidence: process
+    role: tech-lead
+    check: Schedule in a paging tool or a documented rota with escalation. A founder who sleeps with the phone on is a bus factor of one.
+  - id: OBS-08
+    title: Runbooks explain what each alert means and what to do first
+    severity: medium
+    tier: 2
+    when: []
+    evidence: process
+    role: devops
+    check: docs/runbooks or alert annotations linking to steps.
+  - id: OBS-09
+    title: Incidents get blameless postmortems, and the action items are tracked to done
+    severity: medium
+    tier: 2
+    when: []
+    evidence: process
+    role: tech-lead
+    check: Postmortem folder or tracker with completed follow-ups.
+  - id: OBS-10
+    title: A status page exists so customers check it before they email you
+    severity: medium
+    tier: 2
+    when: [b2b]
+    evidence: process
+    role: devops
+    check: Hosted on separate infrastructure from the app it reports on.

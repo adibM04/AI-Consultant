@@ -1,0 +1,156 @@
+domain: data
+title: Data model, databases and data handling
+summary: The schema, the migrations, the backups, and what happens at 5 million rows.
+items:
+  - id: DAT-01
+    title: The schema was designed (keys, foreign keys, constraints, types), not improvised table by table
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Review schema and migrations. Missing foreign keys, NOT NULL, unique constraints, JSON blobs holding relational data, duplicated columns across tables, stringly-typed enums.
+  - id: DAT-02
+    title: Migrations are versioned, run forward in CI and have a rollback path
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: A migration tool in use (not "sync schema on boot"), down migrations or a documented expand/contract approach, and migrations run in the deploy pipeline.
+  - id: DAT-03
+    title: Migrations avoid long table locks on large tables (concurrent index builds, batched backfills, expand then contract)
+    severity: high
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Look for ALTER TABLE adding NOT NULL with default, non-concurrent CREATE INDEX, and in-migration data backfills on big tables.
+  - id: DAT-04
+    title: Indexes exist for real query paths (filters, joins, sorts, foreign keys)
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Match WHERE/ORDER BY/JOIN columns in the code to indexes in the schema. Flag foreign keys without indexes and unbounded table scans.
+  - id: DAT-05
+    title: N+1 queries and unbounded result sets are controlled
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Loops that query per row, ORM lazy loading in list endpoints, endpoints that return every row.
+  - id: DAT-06
+    title: Connection pooling is configured so a traffic spike cannot exhaust the database
+    severity: high
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: Pool size settings, a pooler (PgBouncer, RDS Proxy, provider pooler) for serverless or multi-instance deployments, sensible timeouts.
+  - id: DAT-07
+    title: Automated backups run at least nightly
+    severity: critical
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: Managed database backup settings, or backup jobs in IaC. If neither is visible in the repo, mark unknown and ask the founder to show the console setting.
+  - id: DAT-08
+    title: A restore from backup has been performed and timed, and the steps are written down
+    severity: critical
+    tier: 1
+    when: []
+    evidence: process
+    role: devops
+    check: Look for a restore runbook or drill record. Without one the status is unknown at best.
+  - id: DAT-09
+    title: Point-in-time recovery is enabled for the database
+    severity: high
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: WAL archiving or managed PITR setting with a retention window long enough to notice a bad delete.
+  - id: DAT-10
+    title: Deletes of user-visible records are soft (recoverable) or otherwise reversible
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Hard deletes in handlers for business records. Also check that every query excludes soft-deleted rows, and that unique constraints survive re-creation.
+  - id: DAT-11
+    title: All input is validated on the server with a schema, not only in the form
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: A validation layer (zod, pydantic, DRF serializers, etc.) at every write entry point, with length, type and range limits.
+  - id: DAT-12
+    title: Timestamps are stored in UTC with the user's zone kept separately, and scheduled work respects it
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: timestamp without time zone, local-time Date parsing, reminders computed in server local time, DST handling.
+  - id: DAT-13
+    title: Text handling survives apostrophes, accents, emoji and right-to-left scripts in every field
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: UTF-8 (utf8mb4) end to end, no ASCII-only regex name validation, no length truncation by bytes, no naive SQL string building. Check PDFs and emails too.
+  - id: DAT-14
+    title: Money is stored as integer minor units or fixed-point decimals with an explicit currency, never floats
+    severity: critical
+    tier: 1
+    when: [payments]
+    evidence: code
+    role: backend-engineer
+    check: float/double/Number columns or JS arithmetic on prices. Currency column present. Rounding rule defined in one place.
+  - id: DAT-15
+    title: The data model can absorb a customer's "one small change" (per-tenant settings, custom fields, plan variants) without a rewrite
+    severity: medium
+    tier: 3
+    when: [b2b]
+    evidence: code
+    role: architect
+    check: Hard-coded plan names and tenant-specific if-statements in code are warning signs. Is configuration data-driven?
+  - id: DAT-16
+    title: List endpoints use pagination that stays fast and correct deep into the result set
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: OFFSET pagination on large tables, no max page size, no stable sort key. Cursor/keyset pagination is the fix.
+  - id: DAT-17
+    title: Customers can export their data in a usable format without engineering help
+    severity: medium
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: backend-engineer
+    check: CSV/JSON export, run as a background job for large data, tenant-scoped, protected against CSV formula injection.
+  - id: DAT-18
+    title: Imports validate, report row-level errors and survive odd encodings, delimiters and huge files
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Streaming parse, encoding detection, BOM handling, row limits, partial-failure reporting, dry-run.
+  - id: DAT-19
+    title: Retention rules exist and code actually deletes what the contract and privacy policy say it will
+    severity: high
+    tier: 2
+    when: [pii]
+    evidence: code
+    role: compliance
+    check: Scheduled purge jobs for logs, uploads, deleted accounts and inactive data. Compare to the stated retention period in the privacy policy.

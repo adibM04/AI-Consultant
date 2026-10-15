@@ -1,0 +1,44 @@
+{
+  "domain": "identity",
+  "items": [
+    {
+      "id": "IDN-02",
+      "status": "fail",
+      "summary": "Reset token comes from Math.random(), is stored in plain text, has no expiry and nothing invalidates it after use. It is also never emailed, so the flow is incomplete.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:29",
+        "examples/vibe-coded-app/server.js:30"
+      ],
+      "fix": "Generate 32 bytes with crypto.randomBytes, store only a SHA-256 hash with an expiry of 30-60 minutes, delete it on use and on password change."
+    },
+    {
+      "id": "IDN-03",
+      "status": "fail",
+      "summary": "Passwords are hashed with unsalted MD5, which is cracked at billions of guesses per second.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:15",
+        "examples/vibe-coded-app/server.js:22"
+      ],
+      "fix": "Use argon2id or bcrypt via a maintained library, and rehash existing users on their next login."
+    },
+    {
+      "id": "IDN-06",
+      "status": "fail",
+      "summary": "/login, /signup and /forgot have no rate limiting. Searched: rate-limit|limiter|throttle across the repo, no hits.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:19",
+        "searched: rate-limit|limiter|throttle"
+      ],
+      "fix": "Add express-rate-limit backed by Redis (per IP and per email) on all auth routes."
+    },
+    {
+      "id": "IDN-05",
+      "status": "fail",
+      "summary": "The 'token' returned by /login is the raw user id: it never expires and cannot be revoked, and it can be guessed.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:25"
+      ],
+      "fix": "Issue signed, expiring session tokens or use a hosted auth provider. This is an auth rewrite, so ask an experienced engineer to review it."
+    }
+  ]
+}

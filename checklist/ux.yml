@@ -1,0 +1,84 @@
+domain: ux
+title: Product experience
+summary: What the customer actually sees when things are slow, wrong, empty or in another language.
+items:
+  - id: UXP-01
+    title: Every screen has designed empty, loading and error states
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: Data-fetching components with no loading or error branch, blank screens on empty lists, infinite spinners.
+  - id: UXP-02
+    title: Error messages tell the customer what happened and what to do next, instead of "something went wrong"
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: Generic catch-all messages, raw exception text in the UI, errors with no recovery action or support reference ID.
+  - id: UXP-03
+    title: Forms keep what people typed when one field fails validation, and show errors next to the field
+    severity: low
+    tier: 1
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: Controlled state vs full page reload, server errors mapped to fields.
+  - id: UXP-04
+    title: Pages and bundles are light enough for hotel wifi and mid-range phones
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: Bundle size, image optimisation, blocking requests, no waterfall of sequential fetches, offline/slow-network behaviour on critical flows.
+  - id: UXP-05
+    title: Transactional emails render correctly in the mail clients your customers use
+    severity: medium
+    tier: 2
+    when: [email]
+    evidence: process
+    role: frontend-engineer
+    check: Table-based or tested templating (MJML/React Email), plain-text alternatives, dark mode, test across clients.
+  - id: UXP-06
+    title: Notifications can be turned off per channel and category, and marketing email has a working unsubscribe
+    severity: high
+    tier: 1
+    when: [email]
+    evidence: code
+    role: backend-engineer
+    check: Preference centre, List-Unsubscribe headers, enforcement on send, legal-required footer details.
+  - id: UXP-07
+    title: Destructive actions have confirmation or undo
+    severity: low
+    tier: 3
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: Delete buttons that act immediately, bulk operations with no preview.
+  - id: UXP-08
+    title: The app is usable by keyboard and screen reader (semantic HTML, labels, focus management, contrast)
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: Clickable divs, unlabeled inputs, modal focus traps, missing alt text, colour-only meaning.
+  - id: UXP-09
+    title: Text is translatable, and dates, numbers and currencies are formatted per locale
+    severity: medium
+    tier: 3
+    when: [i18n]
+    evidence: code
+    role: frontend-engineer
+    check: Hard-coded strings, concatenated sentences, Intl usage, plural rules, text expansion and RTL layout.
+  - id: UXP-10
+    title: The back button, deep links, refresh and multiple tabs behave as people expect
+    severity: low
+    tier: 2
+    when: []
+    evidence: code
+    role: frontend-engineer
+    check: State kept in URL for filters and steps, no history trapping, safe re-submit after refresh.

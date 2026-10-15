@@ -1,0 +1,100 @@
+domain: compliance
+title: Compliance, privacy and legal
+summary: What the contracts, regulators and auditors will ask you to prove.
+items:
+  - id: CMP-01
+    title: HIPAA obligations are met for any system that stores or processes patient data (safeguards, minimum necessary, breach process)
+    severity: critical
+    tier: 1
+    when: [phi]
+    evidence: process
+    role: compliance
+    check: Identify every place PHI is stored, logged, emailed or sent to a third party. Encryption, access controls, audit logging, risk assessment and breach notification plan. A privacy or security officer must sign off.
+  - id: CMP-02
+    title: A signed BAA exists with every vendor that touches PHI, including cloud, email, monitoring and the AI model provider
+    severity: critical
+    tier: 1
+    when: [phi]
+    evidence: process
+    role: compliance
+    check: List every third-party SDK and API called with patient data (see package manifests, env vars). Ask for the signed agreement for each. Error trackers and analytics are commonly missed.
+  - id: CMP-03
+    title: Audit trails record who viewed a sensitive record, not only who changed it
+    severity: high
+    tier: 2
+    when: [phi, pii]
+    evidence: code
+    role: backend-engineer
+    check: Read-access logging on sensitive entities, immutable storage, searchable by patient/user and by actor.
+  - id: CMP-04
+    title: A general audit log records security-relevant actions (login, permission change, export, delete, admin action) immutably
+    severity: high
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: backend-engineer
+    check: Append-only audit table or stream, actor, target, action, timestamp, IP, and tenant visibility of their own log.
+  - id: CMP-05
+    title: GDPR deletion and access requests reach every table, search index, cache, log and backup (with a stated expiry for backups)
+    severity: high
+    tier: 2
+    when: [eu]
+    evidence: code
+    role: compliance
+    check: Find or design a single "delete this person" procedure and enumerate every store holding personal data. Third-party processors must be included.
+  - id: CMP-06
+    title: Data residency commitments (for example "EU only") are enforced by infrastructure, including backups, logs and sub-processors
+    severity: high
+    tier: 3
+    when: [eu, enterprise]
+    evidence: config
+    role: architect
+    check: Region settings for database, storage, queues, email, analytics, error tracking, AI provider.
+  - id: CMP-07
+    title: "SOC 2 (or equivalent) is underway: policies, evidence collection, and a chosen auditor"
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: process
+    role: compliance
+    check: Compliance automation tool in use, written policies, evidence of controls. This cannot be satisfied from the codebase.
+  - id: CMP-08
+    title: Access to production systems is reviewed quarterly and the review is signed off
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: process
+    role: compliance
+    check: Dated review records listing who has access to what and who approved.
+  - id: CMP-09
+    title: The terms of service and privacy policy match what the code actually collects, shares and retains
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: legal
+    check: Compare the policy text to analytics, trackers, third-party SDKs, stored fields, and retention behaviour. Flag mismatches for a lawyer.
+  - id: CMP-10
+    title: Cookie and tracker consent is implemented where required
+    severity: medium
+    tier: 2
+    when: [eu]
+    evidence: code
+    role: legal
+    check: Analytics and ad scripts load only after consent. Consent is recorded.
+  - id: CMP-11
+    title: A DPA template and sub-processor list are available for business customers
+    severity: medium
+    tier: 2
+    when: [b2b, pii]
+    evidence: process
+    role: legal
+    check: Public sub-processor page that matches the third-party services used in the code.
+  - id: CMP-12
+    title: Accessibility conformance (WCAG 2.1 AA) is assessed and documented where contracts require it
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: process
+    role: qa
+    check: Automated audit (axe/Lighthouse) results plus a manual pass, and a VPAT or conformance statement if buyers ask.

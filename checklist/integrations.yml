@@ -1,0 +1,76 @@
+domain: integrations
+title: APIs, webhooks and third-party integrations
+summary: What you expose, what you consume, and what breaks when either side changes.
+items:
+  - id: API-01
+    title: Inbound webhooks verify signatures, reject replays and are processed idempotently
+    severity: critical
+    tier: 1
+    when: [webhooks]
+    evidence: code
+    role: security
+    check: Raw-body signature verification, timestamp tolerance, event ID dedupe table.
+  - id: API-02
+    title: Outbound webhooks retry with backoff and keep a delivery log customers can inspect and replay
+    severity: medium
+    tier: 2
+    when: [webhooks, api]
+    evidence: code
+    role: backend-engineer
+    check: Delivery attempts stored, signed payloads, disabling of endpoints that fail for days, SSRF protection on customer URLs.
+  - id: API-03
+    title: The public API is versioned so you can change it without breaking customer integrations
+    severity: medium
+    tier: 2
+    when: [api]
+    evidence: code
+    role: architect
+    check: URL or header versioning, deprecation policy, changelog.
+  - id: API-04
+    title: Customers can create, scope, rotate and revoke their own API keys, and keys are stored hashed
+    severity: medium
+    tier: 2
+    when: [api]
+    evidence: code
+    role: backend-engineer
+    check: Key management UI/API, last-used timestamp, per-key scopes, prefix shown once.
+  - id: API-05
+    title: API rate limits protect you without blocking legitimate integrations
+    severity: high
+    tier: 2
+    when: [api]
+    evidence: code
+    role: backend-engineer
+    check: Per-key and per-tenant limits, Retry-After headers, documented quotas, separate limits for expensive endpoints.
+  - id: API-06
+    title: Parsing third-party responses tolerates unexpected shape changes and fails loudly, not silently
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Schema validation on external responses, alerts on parse failures, pinned API versions where the vendor allows.
+  - id: API-07
+    title: OAuth tokens for connected accounts refresh automatically, and refresh failure is handled and surfaced
+    severity: high
+    tier: 1
+    when: [integrations]
+    evidence: code
+    role: backend-engineer
+    check: Refresh-token flow, concurrency-safe refresh, re-authorisation prompt for users, tokens encrypted at rest.
+  - id: API-08
+    title: A sandbox lets customers test their integration without touching real data
+    severity: low
+    tier: 3
+    when: [api]
+    evidence: process
+    role: architect
+    check: Test-mode keys and isolated data.
+  - id: API-09
+    title: Every outbound third-party call has a timeout, a circuit breaker or fallback, and an owner for when the vendor is down
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: HTTP client defaults, failure handling in user-facing paths, graceful degradation of non-critical vendors (analytics, chat widgets).

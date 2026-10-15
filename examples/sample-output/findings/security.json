@@ -1,0 +1,41 @@
+{
+  "domain": "security",
+  "items": [
+    {
+      "id": "SEC-01",
+      "status": "fail",
+      "summary": "A payment provider key is hard-coded in source. (In this fixture it is a fake string; a real one would need rotating immediately.)",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:11"
+      ],
+      "fix": "Move to an environment variable loaded at boot, add a secret scanner to CI, and rotate the key if it ever reached git history."
+    },
+    {
+      "id": "SEC-06",
+      "status": "fail",
+      "summary": "Four queries are built by string interpolation of request data, so signup, login, forgot-password and invoice lookup are all injectable.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:16",
+        "examples/vibe-coded-app/server.js:23",
+        "examples/vibe-coded-app/server.js:30",
+        "examples/vibe-coded-app/server.js:35"
+      ],
+      "fix": "Use parameterised queries ($1 placeholders) everywhere."
+    },
+    {
+      "id": "SEC-10",
+      "status": "fail",
+      "summary": "CORS is configured to allow every origin.",
+      "evidence": [
+        "examples/vibe-coded-app/server.js:8"
+      ],
+      "fix": "Allow only your own front-end origins."
+    },
+    {
+      "id": "SEC-02",
+      "status": "unknown",
+      "summary": "Whether any real key was ever pasted into an AI chat or committed cannot be seen from code.",
+      "question": "When were the Stripe, database and email keys last rotated, and were any pasted into an AI tool?"
+    }
+  ]
+}

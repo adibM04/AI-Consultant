@@ -1,0 +1,164 @@
+domain: security
+title: Application and supply-chain security
+summary: Secrets, dependencies, injection, uploads and the OWASP basics.
+items:
+  - id: SEC-01
+    title: No secrets in source code, git history, client bundles, or committed .env files
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Scan the working tree AND git history (run a secret scanner if available, else grep for key prefixes such as sk_, AKIA, ghp_, xox, private key blocks). Check what ships in the browser bundle (NEXT_PUBLIC_, VITE_ variables).
+  - id: SEC-02
+    title: Every key an AI assistant ever pasted into a config file, chat or prompt has been rotated
+    severity: critical
+    tier: 1
+    when: []
+    evidence: process
+    role: security
+    check: Cannot be verified from code. Ask the founder when keys were last rotated and whether any were shared with an AI tool. Any key that appeared in a commit, an AI chat history or a screenshot should be treated as burned.
+  - id: SEC-03
+    title: Every installed package exists, is the one intended, and is not a look-alike (hallucinated or typosquatted names)
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Review manifests and lockfiles. For each unfamiliar dependency check name spelling, publisher, age, download count and repository link. Flag packages with a handful of downloads that do something trivial.
+  - id: SEC-04
+    title: Dependencies are scanned automatically and the lockfile is committed
+    severity: high
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: Dependabot/Renovate, npm audit / pip-audit / OSV in CI, lockfile present, and install uses the lockfile (npm ci).
+  - id: SEC-05
+    title: User input is sanitised or encoded everywhere it is rendered, preventing XSS
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: dangerouslySetInnerHTML, v-html, innerHTML, |safe, unescaped template output, markdown rendering without a sanitiser, user-supplied URLs in href.
+  - id: SEC-06
+    title: Database access is parameterised; no SQL, NoSQL or command injection paths
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: String-built SQL, raw query helpers with interpolation, exec/system calls with user input, unsanitised filter objects passed to Mongo.
+  - id: SEC-07
+    title: State-changing requests are protected against CSRF
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: CSRF tokens or SameSite cookies plus origin checks, for cookie-authenticated apps. Bearer-token-only APIs are lower risk.
+  - id: SEC-08
+    title: SSRF, open redirects and path traversal are blocked
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Server-side fetch of user-supplied URLs (webhooks, image import, link preview) without an allowlist or private-range block. Redirect targets taken from query parameters. File paths built from input.
+  - id: SEC-09
+    title: File uploads are type-checked, size-limited, malware-scanned and stored where they cannot execute
+    severity: high
+    tier: 1
+    when: [files]
+    evidence: code
+    role: security
+    check: Content sniffing not just extension, size cap, random storage names, private bucket with signed URLs, no upload inside the web root, SVG and HTML served with safe headers, virus scanning for B2B.
+  - id: SEC-10
+    title: CORS is restricted to known origins (not "*" with credentials or reflected origin)
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: CORS middleware config and any manual Access-Control headers.
+  - id: SEC-11
+    title: Security headers are set on every response (CSP, HSTS, X-Content-Type-Options, frame protection, referrer policy)
+    severity: medium
+    tier: 1
+    when: []
+    evidence: config
+    role: security
+    check: Middleware, framework config, or CDN/edge rules. Judge by what is configured, and suggest curl -I against the live site for confirmation.
+  - id: SEC-12
+    title: Data is encrypted in transit everywhere and at rest in databases, buckets and backups
+    severity: high
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: TLS-only connections including database and internal services, HTTP redirected, storage encryption flags in IaC or provider settings, field-level encryption for the most sensitive columns.
+  - id: SEC-13
+    title: Everyone and everything, including AI coding agents, holds least-privilege credentials, and none holds production write access by default
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: security
+    check: IAM roles, shared root credentials, database superuser in the app connection string, production credentials in a developer's or agent's local environment. Separate read-only credentials for investigation.
+  - id: SEC-14
+    title: Logs record who did what and never record passwords, tokens, card numbers or other sensitive fields
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Logging of full request bodies, headers (Authorization, Cookie), ORM query logging with bound parameters, error reporters capturing PII. Redaction in place.
+  - id: SEC-15
+    title: Production errors do not leak stack traces, SQL, or internals; debug mode is off
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: DEBUG=true defaults, verbose error handlers, GraphQL introspection and Swagger exposed in production, default admin credentials.
+  - id: SEC-16
+    title: A penetration test has been run by someone independent, and findings fixed
+    severity: high
+    tier: 3
+    when: [enterprise]
+    evidence: process
+    role: security
+    check: Look for a report or remediation tracker. Otherwise unknown.
+  - id: SEC-17
+    title: There are written, evidence-backed answers to the security questionnaire every enterprise buyer sends
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: process
+    role: security
+    check: "A standard answer set (SIG, CAIQ, or custom) with links to evidence: policies, screenshots, reports."
+  - id: SEC-18
+    title: A vulnerability disclosure process exists (security.txt, a monitored security@ inbox, a response SLA)
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: security
+    check: /.well-known/security.txt, SECURITY.md, and someone who reads the inbox.
+  - id: SEC-19
+    title: There is a documented plan for a stolen laptop or leaked credential (disk encryption, remote wipe, revocation steps)
+    severity: medium
+    tier: 2
+    when: []
+    evidence: process
+    role: security
+    check: Incident response doc, device management, list of credentials a laptop holds and how to revoke each.
+  - id: SEC-20
+    title: Webhook endpoints, public APIs and forms are protected against automated abuse (bot protection, quotas)
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: security
+    check: Signup and contact forms with captcha or proof of work, email-sending endpoints that cannot be used as spam relays.

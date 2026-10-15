@@ -1,0 +1,100 @@
+domain: maintainability
+title: Code health and team practices
+summary: Whether the next human, or the next AI session, can safely change this code.
+items:
+  - id: MNT-01
+    title: The code is readable by a human who did not write it, with consistent structure and naming
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: senior-engineer
+    check: Sample several modules. Inconsistent patterns across files, god functions, magic numbers, comments that contradict code.
+  - id: MNT-02
+    title: Every change gets a human code review before merge
+    severity: high
+    tier: 1
+    when: []
+    evidence: process
+    role: senior-engineer
+    check: Branch protection and PR history. Repos with direct pushes to main and AI-authored commits that nobody read are a finding.
+  - id: MNT-03
+    title: A branching strategy lets two people work without overwriting each other
+    severity: medium
+    tier: 1
+    when: []
+    evidence: process
+    role: tech-lead
+    check: Branch naming, PR flow, release tagging, and a documented convention in CONTRIBUTING.
+  - id: MNT-04
+    title: Dependencies are upgraded on a regular cadence, and nothing is two major versions behind
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: senior-engineer
+    check: Compare manifests to latest releases. Automated update PRs enabled.
+  - id: MNT-05
+    title: The framework and runtime versions still receive security patches
+    severity: high
+    tier: 2
+    when: []
+    evidence: config
+    role: senior-engineer
+    check: Node, Python, framework and database versions against vendor end-of-life dates.
+  - id: MNT-06
+    title: Dead code, abandoned files and leftovers from the AI's earlier attempts have been deleted
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: senior-engineer
+    check: Unused exports, unreferenced files, commented-out blocks, v1/v2/old/backup filenames, duplicate implementations of the same helper.
+  - id: MNT-07
+    title: No single file has grown into an unreviewable monolith
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: senior-engineer
+    check: List the largest files by line count and flag those above roughly 800 lines or with many unrelated responsibilities.
+  - id: MNT-08
+    title: Architecture decisions are written down with their reasons
+    severity: low
+    tier: 2
+    when: []
+    evidence: code
+    role: architect
+    check: docs/adr or equivalent. Why this database, this auth approach, this tenancy model?
+  - id: MNT-09
+    title: A README gets a new engineer running locally in under an hour
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: senior-engineer
+    check: Follow the README literally. Prerequisites, env vars with an example file, seed data, how to run tests. Note every step that fails or is missing.
+  - id: MNT-10
+    title: Documentation exists for whoever inherits the system (components, data flow, third parties, how to deploy)
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: architect
+    check: System diagram, list of vendors and what each is used for, deployment steps, known sharp edges.
+  - id: MNT-11
+    title: Linting, formatting and type checking are configured and enforced
+    severity: medium
+    tier: 1
+    when: []
+    evidence: config
+    role: senior-engineer
+    check: ESLint/ruff/mypy/tsc strictness, pre-commit hooks or CI enforcement, count of suppressions (any, ts-ignore, noqa).
+  - id: MNT-12
+    title: Business rules live in one place each, not duplicated across the frontend, backend and database
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: architect
+    check: Pricing, permission and validation rules re-implemented in several files with subtle differences.

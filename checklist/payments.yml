@@ -1,0 +1,108 @@
+domain: payments
+title: Payments and billing
+summary: Charging the right amount once, and being able to prove it to finance.
+items:
+  - id: PAY-01
+    title: Charge and order creation use idempotency keys so a retry never charges twice
+    severity: critical
+    tier: 1
+    when: [payments]
+    evidence: code
+    role: backend-engineer
+    check: Idempotency-Key on provider calls, unique constraint on order/payment attempt, safe handling of timeouts after the provider has already charged.
+  - id: PAY-02
+    title: Double-submits (four clicks on "Pay") are deduplicated on the server and disabled in the UI
+    severity: high
+    tier: 1
+    when: [payments]
+    evidence: code
+    role: backend-engineer
+    check: Server-side dedupe on the write path, not just a disabled button.
+  - id: PAY-03
+    title: Card numbers never touch your servers or database (hosted fields or redirect), keeping PCI scope minimal
+    severity: critical
+    tier: 1
+    when: [cards]
+    evidence: code
+    role: security
+    check: Raw PAN/CVV in requests, logs, DB columns, or analytics events. Stripe Elements / Checkout / equivalent in use.
+  - id: PAY-04
+    title: Provider webhooks verify signatures and are the source of truth for entitlement and payment state
+    severity: critical
+    tier: 1
+    when: [payments]
+    evidence: code
+    role: backend-engineer
+    check: Signature check with the raw body, replay window, idempotent event handling, and access granted from webhook state, not from the success-page redirect.
+  - id: PAY-05
+    title: Currency, rounding and tax rules are defined for every country sold into
+    severity: high
+    tier: 2
+    when: [payments]
+    evidence: code
+    role: finance
+    check: Rounding applied at a single, documented step. Zero-decimal and three-decimal currencies handled. Locale price formatting.
+  - id: PAY-06
+    title: Sales tax and VAT are calculated, collected and reported correctly where required
+    severity: high
+    tier: 2
+    when: [payments]
+    evidence: process
+    role: finance
+    check: A tax engine or provider tax setting (Stripe Tax, etc.), VAT ID collection for B2B, and registration in the jurisdictions where thresholds are exceeded. Needs an accountant to confirm.
+  - id: PAY-07
+    title: Subscription upgrades, downgrades, pauses, cancellations and proration behave correctly
+    severity: high
+    tier: 2
+    when: [subscriptions]
+    evidence: code
+    role: backend-engineer
+    check: Plan-change code paths, proration mode, end-of-period vs immediate behaviour, entitlement changes on each transition.
+  - id: PAY-08
+    title: Failed payments are retried on a schedule, customers are emailed (dunning), and access is handled deliberately
+    severity: high
+    tier: 2
+    when: [subscriptions]
+    evidence: config
+    role: backend-engineer
+    check: Smart-retry or custom schedule, dunning emails, grace period, what happens at final failure.
+  - id: PAY-09
+    title: Refunds, credits and partial refunds work and keep revenue records consistent
+    severity: high
+    tier: 2
+    when: [payments]
+    evidence: code
+    role: backend-engineer
+    check: Refund handlers update internal ledger, entitlement and tax. Webhook-driven refunds from the provider dashboard are handled.
+  - id: PAY-10
+    title: Usage metering matches what is billed, to the cent, and can be audited
+    severity: high
+    tier: 2
+    when: [usage-billing]
+    evidence: code
+    role: backend-engineer
+    check: Events are idempotent, late events handled, billing period boundaries in UTC, and a reconciliation between raw usage and invoices.
+  - id: PAY-11
+    title: Invoices carry required fields (legal entity, tax ID, customer PO number) and can be re-issued
+    severity: medium
+    tier: 3
+    when: [b2b, payments]
+    evidence: code
+    role: finance
+    check: Custom fields on invoices, sequential numbering, PDF generation, credit notes.
+  - id: PAY-12
+    title: Annual and custom-term contracts can be represented without code changes
+    severity: medium
+    tier: 3
+    when: [b2b, payments]
+    evidence: code
+    role: architect
+    check: Prices, terms and discounts as data. Manual invoicing path for enterprise deals.
+  - id: PAY-13
+    title: Finance can reconcile revenue reports against the payment provider and the bank
+    severity: medium
+    tier: 2
+    when: [payments]
+    evidence: process
+    role: finance
+    check: Exports with provider IDs, ledger of every money movement, MRR definition written down.

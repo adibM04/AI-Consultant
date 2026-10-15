@@ -1,0 +1,68 @@
+domain: testing
+title: Testing and quality assurance
+summary: Proof that the thing works, written by someone who knows what "works" means.
+items:
+  - id: TST-01
+    title: Business logic has unit tests that assert real expected behaviour, not just that the code runs
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: qa
+    check: Sample the tests. Tests with no assertions, assertions on mocks of the thing under test, snapshot tests of everything, or tests that were clearly generated from the implementation rather than the requirement.
+  - id: TST-02
+    title: Tests for the money and access paths exist end to end (signup, login, checkout, permission boundaries)
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: qa
+    check: Playwright/Cypress or equivalent covering the flows that make money and the flows that must refuse access.
+  - id: TST-03
+    title: Integration tests cover every third-party API the product depends on, against sandboxes or recorded contracts
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: qa
+    check: Contract tests or a sandbox suite for payments, email, auth provider and any data API.
+  - id: TST-04
+    title: Every fixed bug gets a regression test
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: qa
+    check: Look at recent bug-fix commits for an accompanying test.
+  - id: TST-05
+    title: Load testing has been done at realistic data volume before launch campaigns
+    severity: high
+    tier: 2
+    when: []
+    evidence: process
+    role: devops
+    check: k6/Locust scripts or a dated report with the production-like data size.
+  - id: TST-06
+    title: Test and staging data resembles production without containing production personal data
+    severity: medium
+    tier: 2
+    when: [pii]
+    evidence: code
+    role: backend-engineer
+    check: Seed scripts, anonymisation of copies. Production dumps in dev environments are a finding.
+  - id: TST-07
+    title: Tests run in CI on every change and a failing test blocks merge
+    severity: high
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: CI config runs the suite. Skipped tests (.skip, xfail, test.todo) counted and listed.
+  - id: TST-08
+    title: The app has been tested on old devices, slow networks and the browsers your customers actually use
+    severity: low
+    tier: 3
+    when: [b2b]
+    evidence: process
+    role: qa
+    check: Browserslist and test matrix versus the analytics of real customers.

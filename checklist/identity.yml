@@ -1,0 +1,100 @@
+domain: identity
+title: Identity, login and sessions
+summary: Who is this user, can an attacker become them, and can you cut them off.
+items:
+  - id: IDN-01
+    title: Login and signup handle plus-addressing, case, Unicode and whitespace in emails consistently
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Find where emails are normalised. Same normalisation on signup, login, reset and invite? Unique index on the normalised value? Does "a+b@x.com" survive validation and email delivery?
+  - id: IDN-02
+    title: Password reset and magic links expire, work once, and are stored hashed
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Look for token expiry, single-use invalidation, hashed storage, invalidation on password change, and no token in logs or referrer-leaking URLs.
+  - id: IDN-03
+    title: Passwords hashed with a modern slow algorithm (argon2id, scrypt, bcrypt)
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Grep for md5/sha1/sha256 used on passwords, plaintext columns, home-made crypto. Provider-delegated auth (Auth0, Clerk, Supabase) is a pass.
+  - id: IDN-04
+    title: MFA is available, and there is a recovery path for users who lose their device
+    severity: high
+    tier: 2
+    when: [b2b]
+    evidence: code
+    role: backend-engineer
+    check: TOTP/WebAuthn enrolment, recovery codes, and an identity-verified reset path that does not bypass MFA with a single email click.
+  - id: IDN-05
+    title: Sessions time out (idle and absolute) and all sessions for one user can be revoked
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Session or JWT lifetime. Stateless JWTs with no revocation list and a 30-day expiry fail this. Revocation on password change and on user disable.
+  - id: IDN-06
+    title: Login, signup, reset and MFA endpoints are rate limited per account and per IP
+    severity: critical
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Find rate-limiting middleware or provider config and confirm it covers auth routes, not just the API. In-memory limiters fail when there is more than one instance.
+  - id: IDN-07
+    title: Lockout and throttling stop attackers without letting them lock out real users at will
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Progressive delays or captcha beat hard lockout. If hard lockout exists, is there a self-service unlock, and can an attacker lock a known victim out indefinitely?
+  - id: IDN-08
+    title: Signup, login and reset responses do not reveal whether an account exists
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Compare responses and timing for known and unknown emails on reset and login.
+  - id: IDN-09
+    title: Email is verified before it is trusted for access, invites or account linking
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Social login or SSO that links to an existing account by unverified email enables account takeover. Check the linking logic.
+  - id: IDN-10
+    title: SSO via OIDC is available for customers who require it
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: code
+    role: backend-engineer
+    check: OIDC login per tenant, enforced-SSO setting that disables password login for that tenant, and just-in-time provisioning rules.
+  - id: IDN-11
+    title: SAML is supported, with per-tenant configuration and signed-assertion validation
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: code
+    role: security
+    check: Library-based SAML (not hand-rolled XML parsing), signature validation, clock skew, certificate rotation, IdP-initiated flow decision.
+  - id: IDN-12
+    title: SCIM provisioning deactivates a user's access the moment IT offboards them
+    severity: medium
+    tier: 3
+    when: [enterprise]
+    evidence: code
+    role: backend-engineer
+    check: SCIM Users/Groups endpoints, deprovisioning that also kills sessions, API keys and tokens, not just a flag nobody checks.
