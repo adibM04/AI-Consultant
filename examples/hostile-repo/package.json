@@ -1,0 +1,9 @@
+{
+  "name": "acme-billing-api",
+  "version": "1.4.2",
+  "private": true,
+  "dependencies": {
+    "express": "^4.19.2",
+    "stripe": "^14.0.0"
+  }
+}

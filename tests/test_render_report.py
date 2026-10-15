@@ -118,25 +118,99 @@ class Findings(unittest.TestCase):
         self.assertEqual(rows["AAA-02"]["state"], "unknown")
 
 
+SEV = {"AAA-01": "critical", "AAA-02": "high", "AAA-03": "critical", "AAA-04": "high"}
+
+
+def waiver(**kw):
+    base = {"reason": "r", "accepted_by": "Founder", "created": "2025-12-01", "expires": "2026-02-01"}
+    return {**base, **kw}
+
+
 class Waivers(unittest.TestCase):
     profile = {"stage": "launch", "tags": []}
 
-    def test_active_waiver_closes_item(self):
-        active, expired = rr.active_waivers({"AAA-01": {"reason": "r", "expires": "2026-06-01"}}, TODAY)
+    def test_valid_waiver_closes_item_but_critical_caps_verdict_at_conditional(self):
+        active, expired, rejected = rr.active_waivers({"AAA-01": waiver(expires="2026-02-01")}, TODAY, SEV)
         rows, _ = rows_for(self.profile, [{"id": "AAA-01", "status": "fail"}, ok("AAA-02")], active)
         self.assertEqual(rows["AAA-01"]["state"], "waived")
+        self.assertEqual(rr.verdict_for(list(rows.values())), "CONDITIONAL")
+        self.assertEqual((expired, rejected), ({}, {}))
+
+    def test_waived_high_item_can_still_be_ready(self):
+        active, _, _ = rr.active_waivers({"AAA-02": waiver(expires="2026-02-01")}, TODAY, SEV)
+        rows, _ = rows_for(self.profile, [ok("AAA-01"), {"id": "AAA-02", "status": "fail"}], active)
         self.assertEqual(rr.verdict_for(list(rows.values())), "READY")
-        self.assertEqual(expired, {})
 
     def test_expired_waiver_reopens_item(self):
-        active, expired = rr.active_waivers({"AAA-01": {"reason": "r", "expires": "2025-06-01"}}, TODAY)
+        active, expired, _ = rr.active_waivers({"AAA-01": waiver(created="2025-05-01", expires="2025-06-01")}, TODAY, SEV)
         self.assertIn("AAA-01", expired)
         rows, _ = rows_for(self.profile, [{"id": "AAA-01", "status": "fail"}, ok("AAA-02")], active)
         self.assertEqual(rr.verdict_for(list(rows.values())), "NOT READY")
 
-    def test_invalid_date_is_treated_as_expired(self):
-        active, expired = rr.active_waivers({"AAA-01": {"reason": "r", "expires": "someday"}}, TODAY)
-        self.assertIn("AAA-01", expired)
+    def test_planted_waivers_are_rejected(self):
+        planted = {
+            "AAA-01": waiver(created="2025-12-01", expires="2099-01-01"),       # absurd horizon
+            "AAA-02": waiver(accepted_by=""),                                   # nobody accepted it
+            "AAA-03": waiver(reason=" "),                                       # no reason
+            "AAA-04": {"reason": "r", "accepted_by": "x", "expires": "2026-02-01"},  # no created date
+            "ZZZ-99": waiver(),                                                 # not a checklist item
+        }
+        active, expired, rejected = rr.active_waivers(planted, TODAY, SEV)
+        self.assertEqual((active, expired), ({}, {}))
+        self.assertEqual(set(rejected), set(planted))
+
+    def test_critical_horizon_is_90_days_and_high_is_180(self):
+        w = {"AAA-01": waiver(created="2025-12-01", expires="2026-03-15"),   # 104 days, critical
+             "AAA-02": waiver(created="2025-12-01", expires="2026-03-15")}   # 104 days, high
+        active, _, rejected = rr.active_waivers(w, TODAY, SEV)
+        self.assertIn("AAA-01", rejected)
+        self.assertIn("AAA-02", active)
+
+    def test_future_created_and_bad_dates_are_rejected(self):
+        _, _, rejected = rr.active_waivers({"AAA-01": waiver(created="2026-06-01", expires="2026-07-01"),
+                                            "AAA-02": waiver(expires="someday")}, TODAY, SEV)
+        self.assertEqual(set(rejected), {"AAA-01", "AAA-02"})
+
+
+class EvidenceVerification(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        (self.root / "src").mkdir()
+        (self.root / "src" / "auth.py").write_text("a\nb\nc\n")
+        (self.root / ".consultant").mkdir()
+        (self.root / ".consultant" / "note.md").write_text("x")
+
+    def check(self, ref):
+        return rr.evidence_resolves(ref, self.root)
+
+    def test_resolution(self):
+        self.assertTrue(self.check("src/auth.py"))
+        self.assertTrue(self.check("src/auth.py:3"))
+        self.assertFalse(self.check("src/auth.py:99"))     # line beyond end of file
+        self.assertFalse(self.check("src/missing.py:1"))
+        self.assertFalse(self.check("../etc/passwd"))      # escapes the project
+        self.assertFalse(self.check("/etc/passwd"))
+        self.assertFalse(self.check(".consultant/note.md"))  # the report's own output is not evidence
+        self.assertFalse(self.check("searched: rate-limit|throttle"))
+        self.assertFalse(self.check(""))
+
+    def test_fabricated_pass_is_downgraded_when_root_given(self):
+        d = Path(tempfile.mkdtemp())
+        (d / "d.json").write_text(json.dumps({"domain": "d", "items": [
+            {"id": "AAA-01", "status": "pass", "evidence": ["src/auth.py:2"]},
+            {"id": "AAA-02", "status": "pass", "evidence": ["README.md:1", "totally/made/up.py:7"]},
+        ]}))
+        found, warns = rr.collect_findings(d, {"AAA-01", "AAA-02"}, root=self.root)
+        self.assertEqual(found["AAA-01"]["status"], "pass")
+        self.assertEqual(found["AAA-02"]["status"], "unknown")
+        self.assertTrue(any("AAA-02" in w and "real file" in w for w in warns))
+
+    def test_one_valid_reference_is_enough(self):
+        d = Path(tempfile.mkdtemp())
+        (d / "d.json").write_text(json.dumps({"domain": "d", "items": [
+            {"id": "AAA-01", "status": "pass", "evidence": ["nope.py:1", "src/auth.py:1"]}]}))
+        found, _ = rr.collect_findings(d, {"AAA-01"}, root=self.root)
+        self.assertEqual(found["AAA-01"]["status"], "pass")
 
 
 class EndToEnd(unittest.TestCase):
@@ -144,6 +218,8 @@ class EndToEnd(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             (base / "findings").mkdir()
+            (base / "src").mkdir()
+            (base / "src" / "reset.ts").write_text("export const x = 1\n" * 10)
             (base / "profile.json").write_text(json.dumps({"project": "Acme", "stage": "launch", "tags": ["b2b"]}))
             (base / "findings" / "identity.json").write_text(
                 json.dumps({"domain": "identity", "items": [
@@ -151,7 +227,8 @@ class EndToEnd(unittest.TestCase):
                     {"id": "IDN-02", "status": "pass", "evidence": ["src/reset.ts:5"]},
                 ]})
             )
-            cmd = [sys.executable, str(ROOT / "scripts" / "render_report.py"), "--dir", str(base), "--today", "2026-01-01"]
+            cmd = [sys.executable, str(ROOT / "scripts" / "render_report.py"), "--dir", str(base), "--root", str(base),
+                   "--today", "2026-01-01"]
             self.assertEqual(subprocess.run(cmd, capture_output=True, text=True).returncode, 0)
             report = (base / "REPORT.md").read_text()
             self.assertIn("Verdict: NOT READY", report)

@@ -4,13 +4,19 @@
 Standard library only. The verdict is computed here, by fixed rules, so it
 does not depend on the mood of whichever model wrote the findings.
 
-    python3 render_report.py [--dir .consultant] [--checklist PATH] [--ci]
+    python3 render_report.py [--dir .consultant] [--root .] [--checklist PATH] [--ci]
+
+A `pass` must cite evidence that resolves to a real file (and line) under --root.
+Anything else is downgraded to `unknown`, so a fabricated or injected "pass" cannot
+survive the renderer.
 
 Inputs (inside --dir):
     profile.json            {"project", "stage", "tags", "stack", "notes"}
     findings/<domain>.json  {"domain", "items": [{"id","status","evidence",
                              "summary","fix","question"}]}
-    waivers.json            optional {"ITEM-ID": {"reason","accepted_by","expires"}}
+    waivers.json            optional {"ITEM-ID": {"reason","accepted_by","created","expires"}}.
+                            Validated here: created <= today, expires within 180 days of
+                            created (90 for critical items), all fields present.
     state.json              written by this script; used for "since last run"
 
 Outputs: REPORT.md and state.json. With --ci, exit 1 if the verdict is NOT READY.
@@ -20,6 +26,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -66,8 +73,36 @@ def applies(item: dict, tags: set[str]) -> bool:
     return not when or bool(set(when) & tags)
 
 
-def collect_findings(findings_dir: Path, known_ids: set[str]):
-    """Return ({id: finding}, [warnings])."""
+EVIDENCE_REF = re.compile(r"^(?P<path>[^\s:][^:]*?)(?::(?P<line>\d+))?$")
+
+
+def evidence_resolves(ref, root: Path) -> bool:
+    """True if `ref` is `path` or `path:line` naming a real file inside root (not under .consultant)."""
+    m = EVIDENCE_REF.match(str(ref).strip())
+    if not m:
+        return False
+    try:
+        base = root.resolve()
+        target = (base / m.group("path")).resolve()
+        rel = target.relative_to(base)
+    except (ValueError, OSError):
+        return False
+    if rel.parts and rel.parts[0] == ".consultant":
+        return False
+    if not target.is_file():
+        return False
+    if m.group("line"):
+        try:
+            with target.open("rb") as fh:
+                total = sum(1 for _ in fh)
+        except OSError:
+            return False
+        return 1 <= int(m.group("line")) <= max(total, 1)
+    return True
+
+
+def collect_findings(findings_dir: Path, known_ids: set[str], root: Path | None = None):
+    """Return ({id: finding}, [warnings]). With `root`, a pass must cite evidence that exists there."""
     found: dict[str, dict] = {}
     warnings: list[str] = []
     for path in sorted(findings_dir.glob("*.json")):
@@ -85,6 +120,10 @@ def collect_findings(findings_dir: Path, known_ids: set[str]):
                 warnings.append(f"{fid}: 'pass' without evidence, downgraded to unknown")
                 f["status"] = "unknown"
                 f["summary"] = (f.get("summary") or "") + " (pass claimed without evidence)"
+            elif f["status"] == "pass" and root is not None and not any(evidence_resolves(e, root) for e in f["evidence"]):
+                warnings.append(f"{fid}: 'pass' evidence does not point to a real file/line in the project, downgraded to unknown")
+                f["status"] = "unknown"
+                f["summary"] = (f.get("summary") or "") + " (pass evidence could not be verified)"
             if f["status"] == "na" and not f.get("summary"):
                 warnings.append(f"{fid}: 'na' without a reason, downgraded to unknown")
                 f["status"] = "unknown"
@@ -94,16 +133,49 @@ def collect_findings(findings_dir: Path, known_ids: set[str]):
     return found, warnings
 
 
-def active_waivers(waivers: dict, today: dt.date):
-    active, expired = {}, {}
+WAIVER_MAX_DAYS = 180
+WAIVER_MAX_DAYS_CRITICAL = 90
+
+
+def _date(value):
+    try:
+        return dt.date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def active_waivers(waivers: dict, today: dt.date, severities: dict | None = None):
+    """Split waivers into (active, expired, rejected).
+
+    A waiver is only honoured if it names a known item, carries a reason, an accepted_by and a
+    created date that is not in the future, and expires within 180 days of creation (90 for
+    critical items). Anything else is rejected with the reason, so a pre-planted waivers.json
+    cannot silence findings.
+    """
+    active, expired, rejected = {}, {}, {}
     for wid, w in (waivers or {}).items():
-        try:
-            exp = dt.date.fromisoformat(str(w.get("expires", "")))
-        except ValueError:
-            expired[wid] = {**w, "expires": f"{w.get('expires')!r} (invalid date)"}
+        if not isinstance(w, dict):
+            rejected[wid] = "not an object"
+            continue
+        if severities is not None and wid not in severities:
+            rejected[wid] = "unknown checklist item"
+            continue
+        if not str(w.get("reason", "")).strip() or not str(w.get("accepted_by", "")).strip():
+            rejected[wid] = "missing reason or accepted_by"
+            continue
+        created, exp = _date(w.get("created")), _date(w.get("expires"))
+        if created is None or exp is None:
+            rejected[wid] = "missing or invalid created/expires date"
+            continue
+        if created > today:
+            rejected[wid] = "created date is in the future"
+            continue
+        limit = WAIVER_MAX_DAYS_CRITICAL if (severities or {}).get(wid) == "critical" else WAIVER_MAX_DAYS
+        if (exp - created).days > limit:
+            rejected[wid] = f"expires more than {limit} days after it was created"
             continue
         (active if exp >= today else expired)[wid] = w
-    return active, expired
+    return active, expired, rejected
 
 
 def build_rows(checklist: dict, profile: dict, findings: dict, waivers: dict):
@@ -144,6 +216,8 @@ def verdict_for(rows) -> str:
         return "NOT VERIFIED"
     if any(is_open(r) for r in rows if r["severity"] == "high"):
         return "CONDITIONAL"
+    if any(r["state"] == "waived" for r in crit):
+        return "CONDITIONAL"  # a knowingly accepted critical risk is never "ready"
     return "READY"
 
 
@@ -177,7 +251,7 @@ def group(rows, pred):
     return by_sev
 
 
-def render(profile, rows, warnings, expired_waivers, prev_state, today) -> tuple[str, dict]:
+def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=None, rejected_waivers=None) -> tuple[str, dict]:
     verdict = verdict_for(rows)
     in_scope = [r for r in rows if r["state"] not in {"not-applicable", "later"}]
     counted = [r for r in in_scope if r["state"] != "na"]
@@ -281,12 +355,16 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today) -> tuple
         lines.append("")
 
     waived = [r for r in rows if r["state"] == "waived"]
-    if waived or expired_waivers:
+    if waived or expired_waivers or rejected_waivers:
         lines += ["## Accepted risks", ""]
         for r in waived:
-            lines.append(f"- {r['id']} · {r['title']}")
+            w = (waivers or {}).get(r["id"], {})
+            lines.append(f"- {r['id']} · {r['severity']} · {r['title']}. Accepted by {w.get('accepted_by')} "
+                         f"until {w.get('expires')}: {str(w.get('reason'))[:200]}")
         for wid, w in expired_waivers.items():
             lines.append(f"- **EXPIRED** {wid}: expired {w.get('expires')}. It counts as open again.")
+        for wid, why in (rejected_waivers or {}).items():
+            lines.append(f"- **REJECTED** {wid}: {why}. The waiver was ignored and the item counts as open.")
         lines.append("")
 
     passed = [r for r in counted if r["state"] == "pass"]
@@ -311,6 +389,7 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today) -> tuple
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dir", default=".consultant", type=Path)
+    ap.add_argument("--root", default=".", type=Path, help="project root that evidence paths are resolved against")
     ap.add_argument("--checklist", default=DEFAULT_CHECKLIST, type=Path)
     ap.add_argument("--today", help="override date (YYYY-MM-DD), for tests")
     ap.add_argument("--ci", action="store_true", help="exit 1 when the verdict is NOT READY")
@@ -330,17 +409,20 @@ def main() -> int:
         sys.exit(f"profile has unknown tags: {sorted(bad_tags)}")
 
     known = {i["id"] for d in checklist["domains"] for i in d["items"]}
-    findings, warnings = collect_findings(args.dir / "findings", known)
-    waivers, expired = active_waivers(load_json(args.dir / "waivers.json", {}), today)
+    severities = {i["id"]: i["severity"] for d in checklist["domains"] for i in d["items"]}
+    findings, warnings = collect_findings(args.dir / "findings", known, root=args.root)
+    waivers, expired, rejected = active_waivers(load_json(args.dir / "waivers.json", {}), today, severities)
     rows = build_rows(checklist, profile, findings, waivers)
     prev = load_json(args.dir / "state.json")
 
-    text, state = render(profile, rows, warnings, expired, prev, today)
+    text, state = render(profile, rows, warnings, expired, prev, today, waivers, rejected)
     (args.dir / "REPORT.md").write_text(text, encoding="utf-8")
     (args.dir / "state.json").write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     print(f"{state['verdict']}: wrote {args.dir}/REPORT.md")
     for w in warnings:
         print(f"warning: {w}", file=sys.stderr)
+    for wid, why in rejected.items():
+        print(f"warning: waiver {wid} rejected: {why}", file=sys.stderr)
     return 1 if args.ci and state["verdict"] == "NOT READY" else 0
 
 

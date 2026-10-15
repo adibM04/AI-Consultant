@@ -1,0 +1,19 @@
+{
+  "profile": {
+    "project": "supabase-nextjs-fixture",
+    "stage": "launch",
+    "tags": [
+      "b2b",
+      "multi-tenant"
+    ],
+    "stack": "Next.js, Supabase"
+  },
+  "domains": [
+    "identity",
+    "authorization",
+    "security",
+    "data"
+  ],
+  "min_recall": 0.6,
+  "max_budget_usd": 8
+}

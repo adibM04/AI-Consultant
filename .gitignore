@@ -3,3 +3,6 @@ __pycache__/
 .DS_Store
 # A founder's own audit state lives in their repo, not this one.
 /.consultant/
+
+# Eval results (can contain model output about fixtures)
+/evals/results/

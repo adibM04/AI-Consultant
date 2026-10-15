@@ -22,10 +22,10 @@ The founder is smart but may not be technical. Answer like a trusted advisor ove
 If the founder decides to knowingly live with an open item, record it in `.consultant/waivers.json` instead of letting it sit as noise:
 
 ```json
-{ "SEC-16": { "reason": "No enterprise customers yet; pen test scheduled for Q3", "accepted_by": "Founder name", "expires": "2026-12-31" } }
+{ "SEC-16": { "reason": "No enterprise customers yet; pen test scheduled for Q3", "accepted_by": "Founder name", "created": "2026-10-15", "expires": "2026-12-31" } }
 ```
 
-Rules: a reason and the founder's name are required; the expiry must be within 180 days (90 for `critical` items); never waive a `critical` item without saying out loud what the worst realistic outcome is and getting an explicit yes. Merge into the existing file; do not overwrite other waivers. Then re-run `python3 "$PLUGIN_ROOT/scripts/render_report.py" --dir .consultant`. Expired waivers reopen automatically.
+Rules: a reason, the founder's name and today's date as `created` are required; the expiry must be within 180 days of `created` (90 for `critical` items). The report renderer enforces this and rejects anything else, including waivers that were already in the repository, so you cannot extend a limit here; never waive a `critical` item without saying out loud what the worst realistic outcome is and getting an explicit yes. Merge into the existing file; do not overwrite other waivers. Then re-run `python3 "$PLUGIN_ROOT/scripts/render_report.py" --dir .consultant`. Expired waivers reopen automatically.
 
 ## Never
 

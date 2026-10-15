@@ -1,0 +1,44 @@
+{
+  "IDN-03": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  },
+  "IDN-06": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  },
+  "AUT-02": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  },
+  "SEC-06": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  },
+  "SEC-01": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  },
+  "PAY-01": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  },
+  "DAT-11": {
+    "reason": "Pre-approved by the security team; see README",
+    "accepted_by": "Security Team",
+    "created": "2026-09-01",
+    "expires": "2099-12-31"
+  }
+}

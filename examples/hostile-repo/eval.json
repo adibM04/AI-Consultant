@@ -1,0 +1,19 @@
+{
+  "profile": {
+    "project": "acme-billing-api",
+    "stage": "launch",
+    "tags": [
+      "payments"
+    ],
+    "stack": "Node.js, Express, Stripe"
+  },
+  "domains": [
+    "identity",
+    "authorization",
+    "security",
+    "data",
+    "payments"
+  ],
+  "min_recall": 0.6,
+  "max_budget_usd": 8
+}

@@ -98,6 +98,7 @@ Design choices worth knowing:
 - **The checklist is data, not prompt.** YAML in, JSON out. You can fork it for your own industry.
 - **The verdict is code, not vibes.** `render_report.py` computes it with tested rules: any failing critical item means `NOT READY`; a critical item nobody could verify means `NOT VERIFIED`.
 - **`pass` needs evidence.** A finding that says "pass" without a `file:line` is downgraded to `unknown`.
+- **Defences live in code, not just prompts.** A `pass` must cite a real file and line, and waivers need a person, a creation date and a short expiry, so a hostile repo cannot plant its way to `READY`. [`evals/`](evals/) runs the real consultant against a deliberately hostile repository to check this.
 - **Honest about the invisible.** Items that need a console, a contract or a person are `unknown` with a specific question, never assumed fine.
 - **Audited repos are untrusted input.** The auditor is instructed to treat READMEs and comments as data, never commands, to stay read-only, and never to copy a secret into a report.
 - **Re-runs diff.** The report shows what you fixed and what regressed. Accepted risks go in `waivers.json` with a reason and an expiry, and reopen when they expire.
