@@ -33,6 +33,10 @@ Rules of thumb: be honest about `evidence`. If an auditor cannot see it from a r
 
 `agents/domain-auditor.md` and `skills/*/SKILL.md` are prompts. If the consultant gave a wrong result, open a "Wrong audit result" issue with a minimal repro, or better, extend `examples/vibe-coded-app/` and `expected-findings.json` so the case is covered.
 
+## Change the PR guard or the Action
+
+`scripts/pr_guard.py` is tested against real temporary git repositories (`tests/test_pr_guard.py`). Keep two properties: the baseline is read from the base ref only, and nothing from the pull request is executed, and secret-file contents are never read or printed. Inputs reach `action.yml`'s shell only through `env:`, never by `${{ }}` interpolation (a test enforces this). `templates/weekly-audit.yml` must stay schedule/manual only.
+
 ## Run the evals
 
 `python3 evals/run_eval.py <fixture> --yes` runs the real consultant on a fixture and scores it. See `evals/README.md`: it uses a model with shell access on hostile input, costs money, and belongs in a disposable environment. Run it after changing a skill or the auditor prompt, and say in the PR what it showed.

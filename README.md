@@ -87,6 +87,7 @@ Scripts produce facts; the model interprets them. Nothing here is installed or e
 |---|---|
 | `scripts/verify_packages.py` | Whether every npm / PyPI dependency exists, and flags hallucinated names (`NOT_FOUND`), look-alikes of popular packages (`TYPOSQUAT_SUSPECT`), brand-new or abandoned packages. Sends **package names only** to the public registries; `--offline` sends nothing. |
 | `scripts/run_scanners.py` | Runs gitleaks, osv-scanner and trivy if you have them (semgrep with `--semgrep`), normalises the output, and strips secret values. Missing tools are reported with install hints, never installed. |
+| `scripts/pr_guard.py` | The deterministic pull-request checks behind the GitHub Action |
 | `scripts/detect_stacks.py` | Detects Supabase, Firebase, Next.js, Stripe and AI-builder exports, so the auditors apply the right playbook |
 
 ### Stack playbooks
@@ -104,6 +105,32 @@ Design choices worth knowing:
 - **Re-runs diff.** The report shows what you fixed and what regressed. Accepted risks go in `waivers.json` with a reason and an expiry, and reopen when they expire.
 
 See a rendered example in [`examples/sample-output/REPORT.md`](examples/sample-output/REPORT.md) (illustrative, hand-written against the deliberately broken [`examples/vibe-coded-app`](examples/vibe-coded-app)).
+
+## Keep it honest in CI (GitHub Action)
+
+An audit is a snapshot. The PR guard keeps the snapshot from silently rotting. Commit `.consultant/` after your audit, then copy [`templates/pr-guard.yml`](templates/pr-guard.yml) to `.github/workflows/`:
+
+```yaml
+on: pull_request
+permissions: { contents: read, pull-requests: write }
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: adibM04/AI-Consultant@main
+```
+
+It uses **no model and no secrets**, runs safely on forked PRs, and compares the pull request to the last audit on the **base branch** (a PR cannot approve itself by editing `.consultant/`). It flags:
+
+| Severity | Catches |
+|---|---|
+| high | a new dependency that does not exist on the registry or imitates a popular one; `.env`, keys or service-account files added; code cited as evidence for a passing control was **deleted** |
+| medium | cited lines were changed or moved (re-audit those controls); the audit record, waivers or findings were edited; waivers the renderer would reject |
+| low | waivers about to expire; the audit is far behind; no baseline audit yet |
+
+It is a tripwire, not a review. For a scheduled full audit, [`templates/weekly-audit.yml`](templates/weekly-audit.yml) runs the real consultant weekly. That one needs an API key and costs money, runs only on a schedule or by hand, and must never be triggered by pull requests.
 
 ## What it cannot do
 

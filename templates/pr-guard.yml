@@ -1,0 +1,24 @@
+# Copy to .github/workflows/pr-guard.yml in YOUR project.
+#
+# Runs on every pull request. No model, no API key, no secrets. It reads the last audit that was
+# committed to your default branch (.consultant/) and checks the pull request against it.
+# Safe for forked PRs: read-only token, nothing from the PR is executed.
+name: AI-Consultant PR guard
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write   # only to post the sticky comment; drop this line to use the job summary only
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # needed so the base branch and merge base are available
+      # Pin to a release tag or full commit SHA once you have one.
+      - uses: adibM04/AI-Consultant@main
+        with:
+          fail-on: high           # high | medium | low | none

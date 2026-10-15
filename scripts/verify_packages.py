@@ -343,9 +343,11 @@ def risk_of(flags) -> str | None:
     return max((f[1] for f in flags), key=lambda s: SEVERITY_RANK[s])
 
 
-def run(root: Path, offline: bool = False, fetch=http_json, now: dt.datetime | None = None, workers: int = 8) -> dict:
+def run(root: Path, offline: bool = False, fetch=http_json, now: dt.datetime | None = None, workers: int = 8,
+        only: set | None = None) -> dict:
+    """Assess every declared package, or just those in `only` (a set of (ecosystem, name))."""
     now = now or dt.datetime.now(dt.timezone.utc)
-    pkgs = collect(root)
+    pkgs = [p for p in collect(root) if only is None or (p["ecosystem"], p["name"]) in only]
 
     def work(pkg):
         meta = None

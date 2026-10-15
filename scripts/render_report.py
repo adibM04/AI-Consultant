@@ -27,6 +27,7 @@ import argparse
 import datetime as dt
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -222,6 +223,16 @@ def verdict_for(rows) -> str:
     return "READY"
 
 
+def current_commit() -> str | None:
+    """HEAD of the project the report is rendered in, if it is a git checkout (used for staleness checks)."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    sha = out.stdout.strip()
+    return sha if out.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", sha) else None
+
+
 def fmt_evidence(ev) -> str:
     if not ev:
         return ""
@@ -381,6 +392,7 @@ def render(profile, rows, warnings, expired_waivers, prev_state, today, waivers=
 
     state = {
         "generated": today.isoformat(),
+        "commit": current_commit(),
         "verdict": verdict,
         "statuses": {r["id"]: r["state"] for r in rows},
     }

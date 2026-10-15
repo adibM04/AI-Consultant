@@ -68,7 +68,7 @@ python3 "$PLUGIN_ROOT/scripts/run_scanners.py"    --out .consultant/facts/scanne
    - How many items could not be verified, and the three most important questions they need to answer
    - Which kinds of people the open items point to (from the "People this product still needs" table)
    - Where the full report is, and that `/ai-consultant:consult-roadmap` turns it into an ordered plan
-3. Suggest adding `.consultant/` to version control (REPORT.md is useful in the repo; findings only contain file references, never secret values) or to `.gitignore` if they prefer.
+3. Suggest committing `.consultant/` (REPORT.md, findings, waivers.json, state.json; findings only contain file references, never secret values). The optional GitHub Action (`templates/pr-guard.yml`) reads it from the base branch as the baseline for pull requests. `.consultant/facts/` can go in `.gitignore`.
 
 ## Rules
 

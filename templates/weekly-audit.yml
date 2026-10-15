@@ -1,0 +1,64 @@
+# Copy to .github/workflows/weekly-audit.yml in YOUR project.
+#
+# A full model-driven audit on a schedule. This DOES need an Anthropic API key and costs money
+# (roughly a dollar per run for the five core domains in our own tests; yours will vary).
+#
+# Safety rules baked in, please keep them:
+#   * schedule + manual trigger only. NEVER run this on pull_request or pull_request_target:
+#     a pull request is untrusted text and the auditor reads files with shell access.
+#   * read-only token. The audit writes only inside .consultant/ on the runner.
+#
+# Prerequisite: run /ai-consultant:consult once locally and commit .consultant/profile.json,
+# so this job runs non-interactively with the answers you already gave.
+#
+# NOTE: the claude command below is what our eval harness runs locally. This workflow file itself
+# has not been run on GitHub Actions yet: try it with workflow_dispatch first.
+name: AI-Consultant weekly audit
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: adibM04/AI-Consultant
+          ref: main                # pin to a tag or commit SHA
+          path: .ai-consultant
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Require a committed profile
+        run: test -f .consultant/profile.json || { echo "::error::Run /ai-consultant:consult locally and commit .consultant/profile.json first"; exit 1; }
+      - name: Run the audit
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          domains=$(python3 -c "import json;print(', '.join(d['domain'] for d in json.load(open('.ai-consultant/checklist/checklist.json'))['domains']))")
+          claude -p "Use the ai-consultant:consult skill to audit this project. Nobody is available to answer questions, so run non-interactively: a confirmed profile already exists at .consultant/profile.json (use it unchanged). Audit these domains: ${domains}. Follow the skill exactly, including gathering facts and rendering the report. Finish with a one-line summary of the verdict." \
+            --plugin-dir .ai-consultant --output-format json --permission-mode acceptEdits \
+            --allowedTools "Bash,Read,Grep,Glob,Write,Edit,Agent,Skill" --setting-sources project \
+            --no-session-persistence --max-budget-usd 15 > "$RUNNER_TEMP/claude.json"
+      - name: Summarise
+        if: always()
+        run: |
+          if [ -f .consultant/REPORT.md ]; then head -c 60000 .consultant/REPORT.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consultant-report
+          path: .consultant/
+      - name: Fail when the verdict is NOT READY
+        run: python3 .ai-consultant/scripts/render_report.py --dir .consultant --root . --ci

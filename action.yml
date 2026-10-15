@@ -1,0 +1,61 @@
+name: AI-Consultant PR guard
+description: >-
+  Deterministic pull-request tripwires against your last recorded production-readiness audit:
+  hallucinated or typosquatted dependencies, committed secret files, tampering with waivers,
+  and deleted or rewritten evidence for passing controls. No model and no secrets needed.
+author: adibM04
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  base-ref:
+    description: Base ref to compare against. Defaults to origin/<the pull request's base branch>.
+    required: false
+    default: ""
+  fail-on:
+    description: "Fail the job at this severity or above: high, medium, low or none."
+    required: false
+    default: high
+  offline:
+    description: "Set to 'true' to skip package registry lookups (only package names are ever sent)."
+    required: false
+    default: "false"
+  comment:
+    description: "Set to 'false' to skip the sticky pull-request comment."
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Run PR guard
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_OFFLINE: ${{ inputs.offline }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        BASE_BRANCH: ${{ github.base_ref }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -uo pipefail
+        base="${INPUT_BASE_REF:-origin/${BASE_BRANCH}}"
+        if [ -z "${INPUT_BASE_REF}" ] && [ -z "${BASE_BRANCH}" ]; then
+          echo "::error::No base ref. Run this on pull_request events, or set the base-ref input."; exit 2
+        fi
+        extra=()
+        [ "${INPUT_OFFLINE}" = "true" ] && extra+=(--offline)
+        out="${RUNNER_TEMP}/ai-consultant-guard.md"
+        python3 "${ACTION_PATH}/scripts/pr_guard.py" --base "${base}" --fail-on "${INPUT_FAIL_ON}" \
+          --out-md "${out}" --out-json "${RUNNER_TEMP}/ai-consultant-guard.json" ${extra[@]+"${extra[@]}"} > /dev/null
+        code=$?
+        [ -f "${out}" ] && cat "${out}" >> "${GITHUB_STEP_SUMMARY}"
+        if [ "${INPUT_COMMENT}" = "true" ] && [ -f "${out}" ]; then
+          GITHUB_TOKEN="${GH_TOKEN}" python3 "${ACTION_PATH}/scripts/post_comment.py" "${out}" || true
+        fi
+        if [ "${code}" -ne 0 ]; then
+          echo "::error::AI-Consultant PR guard reported blocking findings (exit ${code}). See the job summary."
+        fi
+        exit "${code}"
