@@ -73,11 +73,11 @@ def applies(item: dict, tags: set[str]) -> bool:
     return not when or bool(set(when) & tags)
 
 
-EVIDENCE_REF = re.compile(r"^(?P<path>[^\s:][^:]*?)(?::(?P<line>\d+))?$")
+EVIDENCE_REF = re.compile(r"^(?P<path>[^\s:][^:]*?)(?::(?P<line>\d+)(?:-(?P<end>\d+))?)?$")
 
 
 def evidence_resolves(ref, root: Path) -> bool:
-    """True if `ref` is `path` or `path:line` naming a real file inside root (not under .consultant)."""
+    """True if `ref` is `path`, `path:line` or `path:start-end` naming a real file inside root (not under .consultant)."""
     m = EVIDENCE_REF.match(str(ref).strip())
     if not m:
         return False
@@ -97,7 +97,8 @@ def evidence_resolves(ref, root: Path) -> bool:
                 total = sum(1 for _ in fh)
         except OSError:
             return False
-        return 1 <= int(m.group("line")) <= max(total, 1)
+        start, end = int(m.group("line")), int(m.group("end") or m.group("line"))
+        return 1 <= start <= end <= max(total, 1)
     return True
 
 

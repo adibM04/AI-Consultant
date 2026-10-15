@@ -186,6 +186,10 @@ class EvidenceVerification(unittest.TestCase):
     def test_resolution(self):
         self.assertTrue(self.check("src/auth.py"))
         self.assertTrue(self.check("src/auth.py:3"))
+        self.assertTrue(self.check("src/auth.py:1-3"))     # line range
+        self.assertFalse(self.check("src/auth.py:2-99"))   # range beyond end of file
+        self.assertFalse(self.check("src/auth.py:3-1"))    # backwards range
+        self.assertFalse(self.check("src/auth.py:3 (the handler)"))  # annotations belong in `summary`
         self.assertFalse(self.check("src/auth.py:99"))     # line beyond end of file
         self.assertFalse(self.check("src/missing.py:1"))
         self.assertFalse(self.check("../etc/passwd"))      # escapes the project

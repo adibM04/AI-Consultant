@@ -23,10 +23,10 @@
       "playbook_check": "SB-2"
     },
     {
-      "id": "AUT-05",
+      "id": "AUT-08",
       "file": "supabase/migrations/001_init.sql",
       "line": 9,
-      "why": "authorization trusts user-editable user_metadata",
+      "why": "authorization trusts user-editable user_metadata, so a user can grant themselves admin",
       "playbook_check": "SB-2"
     },
     {
