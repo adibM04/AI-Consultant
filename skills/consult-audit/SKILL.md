@@ -12,7 +12,7 @@ Use this after fixes, or for a focused look at one area. It needs an existing `.
 
 1. `PLUGIN_ROOT` is two directories above this skill's base directory. Read `PLUGIN_ROOT/checklist/checklist.json` to get the valid domain ids. Match the arguments against them (accept an item id such as `SEC-01` too, and expand it to its domain). If no argument was given, ask which domain, listing the ids with their titles.
 2. Read `.consultant/profile.json`. Tell the founder in one line which items of the domain are in scope for their stage and tags, and how many are deferred.
-3. Delete `.consultant/findings/<domain>.json` for each requested domain, then spawn one `domain-auditor` subagent per domain **in a single message**, passing `domain`, absolute `plugin_root`, and the absolute path to the profile.
+3. Refresh the facts the domain depends on (for `security`, `maintainability`, `infrastructure`, `integrations`: all three scripts from the `consult` skill, step 2; for any other domain `detect_stacks.py` is enough, and run the rest if `.consultant/facts/` is missing or older than the latest commit). Delete `.consultant/findings/<domain>.json` for each requested domain, then spawn one `domain-auditor` subagent per domain **in a single message**, passing `domain`, absolute `plugin_root`, the absolute path to the profile, and the absolute path to `.consultant/facts/`.
 4. Run `python3 "$PLUGIN_ROOT/scripts/render_report.py" --dir .consultant`.
 5. Summarise only what changed for those domains, using the "Since the last run" section of `.consultant/REPORT.md`: items now closed, items still open, regressions. If something the founder claims to have fixed is still failing, say exactly where and why, with `path:line`.
 

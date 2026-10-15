@@ -36,19 +36,35 @@ If `.consultant/profile.json` exists and `--fresh` was not passed, show the foun
 
 Valid tags are listed in `PLUGIN_ROOT/checklist/checklist.json` under `tags`. Valid stages: `launch`, `growth`, `enterprise`.
 
-## 2. Audit
+## 2. Gather facts with deterministic tools
+
+Run these from the project root before any auditor starts. They are scripts, not judgment, and their output becomes evidence for the auditors.
+
+```
+python3 "$PLUGIN_ROOT/scripts/detect_stacks.py"   --out .consultant/facts/stacks.json
+python3 "$PLUGIN_ROOT/scripts/verify_packages.py" --out .consultant/facts/packages.json
+python3 "$PLUGIN_ROOT/scripts/run_scanners.py"    --out .consultant/facts/scanners.json
+```
+
+- `detect_stacks.py` finds which playbooks apply (Supabase, Firebase, Next.js, Stripe, AI-builder exports).
+- `verify_packages.py` asks the public npm and PyPI registries whether every dependency exists and is the one intended. **Only package names are sent**, never code. Tell the founder this in one sentence before running it, and use `--offline` if they object (typosquat checks still work; hallucinated-name detection does not).
+- `run_scanners.py` runs gitleaks, osv-scanner and trivy if they are installed (semgrep only if the founder asks: add `--semgrep`; it downloads rule packs). It never installs anything. If tools are missing, read `summary.missing` and tell the founder which are absent and the install hint from the output. Secret and dependency findings are much weaker without them, but do not block on it.
+- If a script fails, say so, continue, and make sure the auditors know the fact file is absent. Do not invent its contents.
+
+## 3. Audit
 
 1. Read `PLUGIN_ROOT/checklist/checklist.json`. A domain is in scope if at least one of its items applies (its `when` list is empty or intersects the tags, and `tier` ≤ 1/2/3 for launch/growth/enterprise). If the user named domains in the arguments, restrict to those.
 2. Create `.consultant/findings/`. Delete findings files for in-scope domains you are about to re-audit (keep the rest).
-3. Spawn one `domain-auditor` subagent per in-scope domain, **all in a single message so they run in parallel**. Each prompt must state: `domain`, `plugin_root` (absolute path), and the absolute path to `profile.json`. Nothing else is needed; the agent knows the procedure.
+3. Spawn one `domain-auditor` subagent per in-scope domain, **all in a single message so they run in parallel**. Each prompt must state: `domain`, `plugin_root` (absolute path), the absolute path to `profile.json`, and the absolute path to `.consultant/facts/`. Nothing else is needed; the agent knows the procedure.
 4. Wait for all of them. If one fails or returns no findings file, re-run that domain once, then report the gap honestly. Do not fill findings in yourself for a domain you did not audit.
 
-## 3. Report
+## 4. Report
 
 1. Run: `python3 "$PLUGIN_ROOT/scripts/render_report.py" --dir .consultant`
 2. Read `.consultant/REPORT.md`, then give the founder a plain-language summary in the chat. Keep it under about 25 lines:
    - The verdict and what it means in one sentence
    - The top three to five things to fix first, each with the business consequence ("anyone can read another customer's invoices by editing the number in the URL")
+   - Any dependency flagged `NOT_FOUND` or `TYPOSQUAT_SUSPECT` (say plainly that an attacker can claim an unregistered name), and any scanner-reported secret (rotate it, never repeat it)
    - How many items could not be verified, and the three most important questions they need to answer
    - Which kinds of people the open items point to (from the "People this product still needs" table)
    - Where the full report is, and that `/ai-consultant:consult-roadmap` turns it into an ordered plan

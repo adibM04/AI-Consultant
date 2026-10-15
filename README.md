@@ -28,7 +28,7 @@ Then, in your project:
 
 It detects your stack, asks a few questions about stage and data (patients? cards? EU customers? enterprise buyers?), audits 14 domains in parallel, and writes `.consultant/REPORT.md`.
 
-Needs Python 3 for the final report step (standard library only).
+Needs Python 3 (standard library only). Optional: [gitleaks](https://github.com/gitleaks/gitleaks), [osv-scanner](https://github.com/google/osv-scanner) and [trivy](https://github.com/aquasecurity/trivy) make the secret and dependency checks much stronger.
 
 ### Other commands
 
@@ -69,10 +69,29 @@ Browse the source of truth in [`checklist/`](checklist/). Items are scoped by **
 ```
 founder ──► consult skill ──► profile.json (stage + tags, detected and confirmed)
                 │
+                ├─► deterministic facts ──► facts/stacks.json     which playbooks apply
+                │                           facts/packages.json   does every dependency exist?
+                │                           facts/scanners.json   gitleaks / osv-scanner / trivy
+                │
                 ├─► domain-auditor × 14, in parallel, read-only ──► findings/<domain>.json
+                │        (reads the facts and the matching stack playbooks)
                 │
                 └─► scripts/render_report.py (deterministic) ──► REPORT.md
 ```
+
+### Deterministic facts under the model
+
+Scripts produce facts; the model interprets them. Nothing here is installed or executed from your project.
+
+| Script | What it establishes |
+|---|---|
+| `scripts/verify_packages.py` | Whether every npm / PyPI dependency exists, and flags hallucinated names (`NOT_FOUND`), look-alikes of popular packages (`TYPOSQUAT_SUSPECT`), brand-new or abandoned packages. Sends **package names only** to the public registries; `--offline` sends nothing. |
+| `scripts/run_scanners.py` | Runs gitleaks, osv-scanner and trivy if you have them (semgrep with `--semgrep`), normalises the output, and strips secret values. Missing tools are reported with install hints, never installed. |
+| `scripts/detect_stacks.py` | Detects Supabase, Firebase, Next.js, Stripe and AI-builder exports, so the auditors apply the right playbook |
+
+### Stack playbooks
+
+[`stacks/`](stacks/) holds concrete, checklist-mapped procedures for the platforms where vibe-coded apps fail most often: Supabase (RLS off, `service_role` in the browser), Firebase (open rules, "authenticated" mistaken for "authorised"), Next.js (Server Actions without auth, secrets in `NEXT_PUBLIC_`, middleware-only auth), Stripe (unverified webhooks, client-chosen prices), and AI-builder or agent-written codebases (prototype debris, secrets that passed through a chat). Two deliberately broken fixtures in [`examples/`](examples/) check that they work.
 
 Design choices worth knowing:
 
@@ -90,6 +109,7 @@ See a rendered example in [`examples/sample-output/REPORT.md`](examples/sample-o
 Be clear-eyed about this:
 
 - It reads code and config. It cannot see your cloud console, DNS, contracts, vendor agreements or who has the pager. Those become questions.
+- Scanner and registry checks only cover what is installed and reachable. If a tool is missing the report says that area was not checked, rather than calling it clean.
 - It is a language model reading files. It will miss things and occasionally be wrong. Treat a clean report as "no known gaps in what was checked", never as safety.
 - It is not a penetration test, an audit, legal advice, or a tax opinion. SOC 2 needs an auditor. HIPAA needs a person accountable for it. GDPR needs a lawyer.
 - It does not replace the people in the second half of the original list: a senior engineer to read what the AI wrote, someone to run live-database migrations, an on-call human, someone who remembers why it is built this way. It tells you which of those you need, and how urgently.

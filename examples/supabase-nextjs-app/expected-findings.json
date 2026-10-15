@@ -1,0 +1,81 @@
+{
+  "_note": "What a competent audit must not pass. Package findings come from scripts/verify_packages.py --offline facts.",
+  "must_not_pass": [
+    {
+      "id": "SEC-01",
+      "file": ".env.local",
+      "line": 4,
+      "why": "service_role key exposed through a NEXT_PUBLIC_ variable and committed",
+      "playbook_check": "SB-3 / NX-1"
+    },
+    {
+      "id": "AUT-03",
+      "file": "supabase/migrations/001_init.sql",
+      "line": 22,
+      "why": "invoices table has no row level security",
+      "playbook_check": "SB-1"
+    },
+    {
+      "id": "AUT-02",
+      "file": "supabase/migrations/001_init.sql",
+      "line": 20,
+      "why": "documents readable by everyone",
+      "playbook_check": "SB-2"
+    },
+    {
+      "id": "AUT-05",
+      "file": "supabase/migrations/001_init.sql",
+      "line": 9,
+      "why": "authorization trusts user-editable user_metadata",
+      "playbook_check": "SB-2"
+    },
+    {
+      "id": "AUT-01",
+      "file": "app/actions.ts",
+      "line": 9,
+      "why": "server action with no authentication or ownership check",
+      "playbook_check": "NX-2"
+    },
+    {
+      "id": "AUT-02",
+      "file": "app/api/invoices/[id]/route.ts",
+      "line": 8,
+      "why": "invoice returned by id using the service role, no ownership check",
+      "playbook_check": "NX-3"
+    },
+    {
+      "id": "AUT-01",
+      "file": "middleware.ts",
+      "line": 4,
+      "why": "middleware is the only auth layer on Next 14.1.0 (CVE-2025-29927 range)",
+      "playbook_check": "NX-3"
+    },
+    {
+      "id": "IDN-09",
+      "file": "supabase/config.toml",
+      "line": 8,
+      "why": "email confirmation disabled",
+      "playbook_check": "SB-6"
+    },
+    {
+      "id": "IDN-05",
+      "file": "supabase/config.toml",
+      "line": 5,
+      "why": "JWT lifetime of one year",
+      "playbook_check": "SB-6"
+    }
+  ],
+  "expected_facts": {
+    "stacks": [
+      "supabase",
+      "nextjs"
+    ],
+    "packages_flagged_offline": [
+      "axois"
+    ],
+    "packages_flagged_online": [
+      "axois",
+      "supabase-row-guard-utils-zz"
+    ]
+  }
+}

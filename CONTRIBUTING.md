@@ -22,6 +22,13 @@ The most valuable contributions are things only someone who has been paged at 3a
 
 Rules of thumb: be honest about `evidence`. If an auditor cannot see it from a repository, mark it `process`, so it reports `unknown` instead of guessing. Keep severity `critical` for things that expose customers or money, not for good hygiene. Do not renumber ids.
 
+## Add a stack playbook
+
+1. Write `stacks/<id>.md`. Start with a one-paragraph "why this stack fails", then a top-level `Maps to:` line, then checks as `## XX-1 Title` sections. Each check needs its own `Maps to:` line (checklist ids), what to look for, when it fails, and the fix. Say `unknown` plus a question when the repo cannot settle it (dashboard settings, plan tiers), and say what is public by design so auditors do not raise false alarms (Supabase anon key, Firebase web config).
+2. Register it in `stacks/stacks.json` with detection rules (dependency names, file paths, content patterns).
+3. `python3 -m unittest discover -s tests` checks that the playbook is registered and every `Maps to:` id exists.
+4. Prefer adding a case to a fixture in `examples/` and its `expected-findings.json` so the playbook has something to be tested against. Fixture package names must be invented or well-known typos, never a name you have not checked, and fixtures must say "do not install".
+
 ## Improve the auditors
 
 `agents/domain-auditor.md` and `skills/*/SKILL.md` are prompts. If the consultant gave a wrong result, open a "Wrong audit result" issue with a minimal repro, or better, extend `examples/vibe-coded-app/` and `expected-findings.json` so the case is covered.
@@ -32,6 +39,6 @@ The verdict logic is in `scripts/render_report.py` and has tests. A change that 
 
 ## Ground rules
 
-- Python scripts used at runtime stay standard-library only. PyYAML is allowed only for checklist authoring (`scripts/checklist.py`).
+- Python scripts used at runtime stay standard-library only. Scripts that look at a project must never execute, install or import anything from it. PyYAML is allowed only for checklist authoring (`scripts/checklist.py`).
 - Nothing in this repo may phone home or send audited code anywhere.
 - No real secrets in fixtures, even expired ones.

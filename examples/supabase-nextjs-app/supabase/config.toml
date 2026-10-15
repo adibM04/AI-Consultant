@@ -1,0 +1,8 @@
+project_id = "fixture"
+
+[auth]
+enable_signup = true
+jwt_expiry = 31536000
+
+[auth.email]
+enable_confirmations = false

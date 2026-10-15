@@ -1,0 +1,49 @@
+{
+  "stacks": [
+    {
+      "id": "supabase",
+      "title": "Supabase",
+      "playbook": "stacks/supabase.md",
+      "detect": {
+        "dependencies": ["@supabase/supabase-js", "@supabase/ssr", "supabase"],
+        "files": ["supabase/config.toml", "supabase/migrations/*.sql"]
+      }
+    },
+    {
+      "id": "firebase",
+      "title": "Firebase",
+      "playbook": "stacks/firebase.md",
+      "detect": {
+        "dependencies": ["firebase", "firebase-admin", "firebase-functions"],
+        "files": ["firebase.json", "firestore.rules", "storage.rules", ".firebaserc"]
+      }
+    },
+    {
+      "id": "nextjs",
+      "title": "Next.js",
+      "playbook": "stacks/nextjs.md",
+      "detect": {
+        "dependencies": ["next"],
+        "files": ["next.config.js", "next.config.mjs", "next.config.ts"]
+      }
+    },
+    {
+      "id": "stripe",
+      "title": "Stripe",
+      "playbook": "stacks/stripe.md",
+      "detect": {
+        "dependencies": ["stripe", "@stripe/stripe-js", "@stripe/react-stripe-js"],
+        "contains": [{"glob": "**/*.{js,ts,jsx,tsx,py,rb,php}", "pattern": "api\\.stripe\\.com|stripe\\.webhooks|stripe\\.Webhook"}]
+      }
+    },
+    {
+      "id": "ai-builders",
+      "title": "AI app builders and agent-driven development",
+      "playbook": "stacks/ai-builders.md",
+      "detect": {
+        "dependencies": ["lovable-tagger"],
+        "files": [".lovable", ".bolt", ".replit", "replit.nix", ".cursorrules", ".cursor/rules", ".windsurfrules", "CLAUDE.md", "AGENTS.md"]
+      }
+    }
+  ]
+}
