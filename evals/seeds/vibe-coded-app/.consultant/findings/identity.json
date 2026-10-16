@@ -1,0 +1,61 @@
+{
+  "domain": "identity",
+  "items": [
+    {
+      "id": "IDN-01",
+      "status": "fail",
+      "summary": "Emails are used raw in signup (line 16), login (23) and forgot (30): no trim, lowercasing or normalisation, and no unique index is visible (no schema in repo). Case variants create duplicate accounts or failed logins.",
+      "evidence": ["server.js:13-18", "server.js:20-26", "searched: toLowerCase|normalize|trim|unique across repo"],
+      "fix": "Normalise (trim, lowercase, Unicode NFKC) in one helper used by signup, login, forgot; add a unique index on the normalised email; use a validator such as zod."
+    },
+    {
+      "id": "IDN-02",
+      "status": "fail",
+      "summary": "/forgot generates the reset token with Math.random (predictable), stores it in plaintext, sets no expiry, and never emails it. No reset-confirm route exists, so single-use and invalidation are not implemented. Email is also interpolated into SQL (injection).",
+      "evidence": ["server.js:28-32", "searched: reset confirm route, expiry, token hashing in server.js"],
+      "fix": "Use crypto.randomBytes(32), store only a SHA-256 hash with a short expiry, make it single-use, and invalidate on use and password change. Parameterise the query. Prefer a hosted auth provider; a human engineer should review the flow."
+    },
+    {
+      "id": "IDN-03",
+      "status": "fail",
+      "summary": "Passwords are hashed with unsalted MD5 at signup and login, which is trivially crackable.",
+      "evidence": ["server.js:15", "server.js:22"],
+      "fix": "Switch to argon2id or bcrypt (argon2 / bcrypt package) with per-password salts; existing hashes need a rehash-on-login migration, so have an engineer handle it."
+    },
+    {
+      "id": "IDN-05",
+      "status": "fail",
+      "summary": "Login returns the raw user id as the 'token'. There is no session, expiry, signature or revocation, and the id is guessable and sequential. Nothing validates it on other routes.",
+      "evidence": ["server.js:25", "searched: jwt|session|cookie|express-session across repo"],
+      "fix": "Issue server-side sessions or signed JWTs with idle and absolute expiry and a revocation mechanism (session table or token version), or adopt a hosted auth provider. Human engineer should do this."
+    },
+    {
+      "id": "IDN-06",
+      "status": "fail",
+      "summary": "No rate limiting on /signup, /login or /forgot, so credential stuffing and brute force against MD5 hashes are unrestricted.",
+      "evidence": ["server.js:13-32", "searched: rate-limit|throttle|limiter|helmet across repo"],
+      "fix": "Add express-rate-limit with a shared store (e.g. Redis) per IP and per account on auth routes."
+    },
+    {
+      "id": "IDN-07",
+      "status": "fail",
+      "summary": "No throttling, progressive delay, captcha or lockout of any kind on /login.",
+      "evidence": ["server.js:20-26", "searched: lockout|attempts|captcha|delay across repo"],
+      "fix": "Add per-account progressive delays or captcha after failures rather than hard lockout."
+    },
+    {
+      "id": "IDN-08",
+      "status": "partial",
+      "summary": "Login returns a generic 'bad credentials' 401 for both unknown email and wrong password, and /forgot always returns ok. But /signup has no duplicate handling (would error or leak via a DB error), and the SQL injection in these routes undermines the guarantee. Timing is not equalised.",
+      "evidence": ["server.js:24", "server.js:31", "server.js:16"],
+      "fix": "Handle duplicate signup with a neutral response (and verification email), and fix the injection."
+    },
+    {
+      "id": "IDN-09",
+      "status": "fail",
+      "summary": "There is no email verification step: signup inserts the account and it can log in immediately with any claimed address. No social login exists, but email is trusted for password reset and account identity unverified.",
+      "evidence": ["server.js:13-18", "searched: verify|confirmation|verified across repo"],
+      "fix": "Add an email_verified flag and a hashed, expiring verification token; block login, invites and linking until verified."
+    }
+  ]
+}

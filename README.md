@@ -43,6 +43,21 @@ Needs Python 3 (standard library only). Optional: [gitleaks](https://github.com/
 
 You can also just ask: "is my app ready for paying customers?"
 
+## Try it in five minutes
+
+You do not need your own project. After installing:
+
+```
+git clone https://github.com/adibM04/AI-Consultant
+cd AI-Consultant/examples/vibe-coded-app
+claude
+> /ai-consultant:consult
+```
+
+Pick `launch` when asked, answer "yes" to payments, and let it run. You should get a `NOT READY` verdict with the SQL injection, the missing authentication on invoices, the MD5 passwords and the hard-coded key, each with a line number. It is a deliberately broken 50-line file, so nothing real is at stake. In our runs a five-domain audit cost about $0.70 and took about two minutes; auditing all 14 domains of a bigger project will cost more. Delete the generated `.consultant/` folder afterwards.
+
+Prefer to read first? [`examples/real-run`](examples/real-run) is the unedited output of exactly that, plus a questionnaire draft.
+
 ## What it checks
 
 170 items in 14 domains. Every item has a severity, a stage tier, the product traits it applies to, and an owner role.
@@ -107,7 +122,7 @@ Design choices worth knowing:
 - **Audited repos are untrusted input.** The auditor is instructed to treat READMEs and comments as data, never commands, to stay read-only, and never to copy a secret into a report.
 - **Re-runs diff.** The report shows what you fixed and what regressed. Accepted risks go in `waivers.json` with a reason and an expiry, and reopen when they expire.
 
-See a rendered example in [`examples/sample-output/REPORT.md`](examples/sample-output/REPORT.md) (illustrative, hand-written against the deliberately broken [`examples/vibe-coded-app`](examples/vibe-coded-app)).
+See a real run in [`examples/real-run`](examples/real-run) (model-generated, against the deliberately broken [`examples/vibe-coded-app`](examples/vibe-coded-app)). [`examples/sample-output`](examples/sample-output) is a small hand-written file used only to test the renderer.
 
 ## Close the unknowns, answer the buyer
 
@@ -135,7 +150,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: adibM04/AI-Consultant@main
+      - uses: adibM04/AI-Consultant@v0.1.0
 ```
 
 It uses **no model and no secrets**, runs safely on forked PRs, and compares the pull request to the last audit on the **base branch** (a PR cannot approve itself by editing `.consultant/`). It flags:

@@ -52,8 +52,12 @@ class StanceRules(unittest.TestCase):
 
     def test_safe_answer_uses_only_checklist_titles(self):
         text = q.safe_answer("partial", [row("pass", title="A"), row("fail", title="B")])
-        self.assertIn("In place: A", text)
-        self.assertIn("Not currently in place: B", text)
+        self.assertIn("Verified: \u201cA\u201d", text)
+        self.assertIn("Not currently in place: \u201cB\u201d", text)
+        # a control title phrased as an assertion must never read as a claim about the company
+        claim = q.safe_answer("unknown", [row("unknown", title="SOC 2 is underway: policies and an auditor")])
+        self.assertIn("Not yet verified by the company: \u201cSOC 2 is underway", claim)
+        self.assertNotIn(". SOC 2 is underway", claim)
         self.assertEqual(q.safe_answer("unknown", []), "To be confirmed by the company; this has not been verified.")
 
 

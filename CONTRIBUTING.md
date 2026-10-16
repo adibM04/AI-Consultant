@@ -41,6 +41,12 @@ Both exist to stop the tool from helping someone overclaim, so keep their invari
 
 `scripts/pr_guard.py` is tested against real temporary git repositories (`tests/test_pr_guard.py`). Keep two properties: the baseline is read from the base ref only, and nothing from the pull request is executed, and secret-file contents are never read or printed. Inputs reach `action.yml`'s shell only through `env:`, never by `${{ }}` interpolation (a test enforces this). `templates/weekly-audit.yml` must stay schedule/manual only.
 
+## Cut a release
+
+1. Update `CHANGELOG.md`, bump `version` in `.claude-plugin/plugin.json`.
+2. Update the pinned `@vX.Y.Z` / `ref: vX.Y.Z` in `README.md` and `templates/` to the new version (a test fails if they disagree with `plugin.json`).
+3. Run the full checks, commit, then `git tag -a vX.Y.Z -m "..."` on that commit and push the branch and the tag.
+
 ## Run the evals
 
 `python3 evals/run_eval.py <fixture> --yes` runs the real consultant on a fixture and scores it. See `evals/README.md`: it uses a model with shell access on hostile input, costs money, and belongs in a disposable environment. Run it after changing a skill or the auditor prompt, and say in the PR what it showed.

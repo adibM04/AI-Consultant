@@ -2,6 +2,10 @@
 """Run the real consultant (headless Claude Code) against fixtures and score the result.
 
     python3 evals/run_eval.py hostile-repo [vibe-coded-app ...] --yes [--model M] [--keep] [--dry-run]
+    python3 evals/run_eval.py --scenario questionnaire --scenario evidence --yes
+
+Scenarios (evals/scenarios/) exercise one skill each on a frozen seed audit (evals/seeds/), so they
+cost cents instead of a full audit.
 
 WARNING: this runs a language model with shell access on fixtures that contain prompt-injection
 attempts. It works on a throw-away copy in a temp directory and the copy's only dangerous side
@@ -26,6 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "evals"))
 import score as scoring  # noqa: E402
+import score_skills  # noqa: E402
 
 EXAMPLES = ROOT / "examples"
 HIDDEN = {"expected-findings.json", "eval.json"}
@@ -99,9 +104,55 @@ def run_fixture(fixture: str, args) -> dict:
     return out
 
 
+def run_scenario(name: str, args) -> dict:
+    cfg = json.loads((ROOT / "evals" / "scenarios" / name / "scenario.json").read_text(encoding="utf-8"))
+    work = Path(tempfile.mkdtemp(prefix=f"eval-{name}-"))
+    project = work / "project"
+    shutil.copytree(EXAMPLES / cfg["fixture"], project, ignore=lambda d, names: [n for n in names if n in HIDDEN])
+    shutil.copytree(ROOT / "evals" / "seeds" / cfg["seed"] / ".consultant", project / ".consultant", dirs_exist_ok=True)
+    for src, dst in cfg.get("copy", {}).items():
+        shutil.copy(ROOT / "evals" / "scenarios" / name / src, project / dst)
+    env = {**__import__("os").environ, "GIT_AUTHOR_NAME": "eval", "GIT_AUTHOR_EMAIL": "eval@example.invalid",
+           "GIT_COMMITTER_NAME": "eval", "GIT_COMMITTER_EMAIL": "eval@example.invalid"}
+    for cmd in (["git", "init", "-q"], ["git", "add", "-A"], ["git", "commit", "-q", "-m", "seed"]):
+        subprocess.run(cmd, cwd=project, check=True, env=env, capture_output=True)
+    baseline = score_skills.BASELINES[name](project)
+    cmd = ["claude", "-p", cfg["prompt"], "--plugin-dir", str(ROOT), "--output-format", "json",
+           "--permission-mode", "acceptEdits", "--allowedTools", ALLOWED_TOOLS, "--setting-sources", "project",
+           "--no-session-persistence", "--max-budget-usd", str(cfg.get("max_budget_usd", 4))]
+    if args.model:
+        cmd += ["--model", args.model]
+    print(f"[{name}] work dir {work}")
+    if args.dry_run:
+        shutil.rmtree(work, ignore_errors=True)
+        return {"fixture": name, "dry_run": True}
+    started = dt.datetime.now()
+    proc = subprocess.run(cmd, cwd=project, capture_output=True, text=True, timeout=args.timeout)
+    try:
+        meta = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        meta = {"raw": proc.stdout[-500:], "stderr": proc.stderr[-500:]}
+    res = score_skills.SCORERS[name](project, cfg, baseline)
+    out = {"fixture": name, "seconds": int((dt.datetime.now() - started).total_seconds()), "cost_usd": meta.get("total_cost_usd"),
+           "turns": meta.get("num_turns"), "claude_exit": proc.returncode, "score": {**res, "recall": None, "verdict": None,
+                                                                                    "soft_failures": [], "missed": []}}
+    keep = ROOT / "evals" / "results" / f"scenario-{name}-{started:%Y%m%d-%H%M%S}"
+    keep.mkdir(parents=True, exist_ok=True)
+    for sub in (".consultant", "docs"):
+        if (project / sub).exists():
+            shutil.copytree(project / sub, keep / sub, dirs_exist_ok=True)
+    (keep / "result.json").write_text(json.dumps({**out, "claude": meta}, indent=2), encoding="utf-8")
+    print(f"[{name}] saved {keep.relative_to(ROOT)}")
+    if not args.keep:
+        shutil.rmtree(work, ignore_errors=True)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("fixtures", nargs="+", help="directory names under examples/")
+    ap.add_argument("fixtures", nargs="*", help="directory names under examples/")
+    ap.add_argument("--scenario", action="append", default=[], choices=sorted(score_skills.SCORERS),
+                    help="skill scenario to run (repeatable)")
     ap.add_argument("--yes", action="store_true", help="acknowledge this runs a model on hostile fixtures")
     ap.add_argument("--model")
     ap.add_argument("--keep", action="store_true", help="keep the temp working copy")
@@ -110,14 +161,16 @@ def main() -> int:
     args = ap.parse_args()
     if not (args.yes or args.dry_run):
         sys.exit("Refusing to run without --yes. Read the warning in the module docstring first.")
-    results = [run_fixture(f, args) for f in args.fixtures]
+    if not args.fixtures and not args.scenario:
+        sys.exit("name at least one fixture or --scenario")
+    results = [run_fixture(f, args) for f in args.fixtures] + [run_scenario(n, args) for n in args.scenario]
     ok = True
     for r in results:
         if r.get("dry_run"):
             continue
         s = r["score"]
-        print(f"\n== {r['fixture']}: {'PASS' if s['passed'] else 'FAIL'} · recall {s['recall']} · verdict {s['verdict']} "
-              f"· ${r['cost_usd']} · {r['seconds']}s")
+        extra = f" · recall {s['recall']} · verdict {s['verdict']}" if s.get("recall") is not None else ""
+        print(f"\n== {r['fixture']}: {'PASS' if s['passed'] else 'FAIL'}{extra} · ${r['cost_usd']} · {r['seconds']}s")
         for f in s["hard_failures"] + s["soft_failures"]:
             print(f"   - {f}")
         for m in s["missed"]:

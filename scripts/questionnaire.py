@@ -137,20 +137,27 @@ def cap_stance(requested: str, allowed: str) -> str:
 
 
 def safe_answer(stance: str, rows: list[dict]) -> str:
-    """Deterministic wording built only from checklist titles and states."""
+    """Deterministic wording built only from checklist titles and states.
+
+    Titles are written as statements of a control ("SOC 2 is underway: ..."), so they are quoted and
+    introduced as the control being asked about. An unquoted title would read as a claim about the company.
+    """
+    def quoted(titles):
+        return "; ".join(f"\u201c{t}\u201d" for t in titles[:3])
+
     by = {k: [r["title"] for r in rows if category(r) == k] for k in ("sat", "fail", "part", "unk")}
     if stance == "yes":
-        return "Yes. " + "; ".join(by["sat"][:4]) + "."
+        return "Yes. Verified controls: " + quoted(by["sat"]) + "."
     parts = []
     if by["sat"]:
-        parts.append("In place: " + "; ".join(by["sat"][:3]))
+        parts.append("Verified: " + quoted(by["sat"]))
     if by["part"]:
-        parts.append("Partly in place: " + "; ".join(by["part"][:3]))
+        parts.append("Only partly in place: " + quoted(by["part"]))
     if by["fail"]:
-        parts.append("Not currently in place: " + "; ".join(by["fail"][:3]))
+        parts.append("Not currently in place: " + quoted(by["fail"]))
     if by["unk"]:
-        parts.append("Not yet verified: " + "; ".join(by["unk"][:3]))
-    if stance == "unknown" and not parts:
+        parts.append("Not yet verified by the company: " + quoted(by["unk"]))
+    if not parts:
         return "To be confirmed by the company; this has not been verified."
     return ". ".join(parts) + "."
 

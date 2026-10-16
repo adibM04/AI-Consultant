@@ -6,9 +6,9 @@ Generated 2026-10-15 · stage: **launch** · tags: b2b, payments
 
 At least one critical gap is confirmed. Do not put paying customers on this until the blockers below are fixed.
 
-| Pass | Fail | Partial | Unknown | Waived | Not audited |
-|---:|---:|---:|---:|---:|---:|
-| 0 | 13 | 0 | 2 | 0 | 54 |
+| Pass | Fail | Partial | Unknown | Attested | Waived | Not audited |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 13 | 0 | 2 | 0 | 0 | 54 |
 
 Coverage: 15 of 69 in-scope items audited. 54 items are deferred to later stages and 47 do not apply to this product.
 
@@ -150,7 +150,7 @@ Evidence: `examples/vibe-coded-app/server.js:8`
 
 ## Needs a human to confirm
 
-These could not be established from the repository. Answer each with evidence (a screenshot, a document, a console setting) and re-run the consultant.
+These could not be established from the repository. Answer each with evidence (a screenshot, a document, a console setting) and record it with `/ai-consultant:consult-evidence`.
 
 #### AUT-06 · Admin and internal endpoints are separated from the public surface and protected independently
 

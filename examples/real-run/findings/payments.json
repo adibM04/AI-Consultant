@@ -1,0 +1,26 @@
+{
+  "domain": "payments",
+  "items": [
+    {
+      "id": "PAY-01",
+      "status": "fail",
+      "summary": "POST /charge calls Stripe /v1/charges with no Idempotency-Key header and records no order or payment attempt, so a retry or timeout can charge twice (playbook ST-5). The amount is also computed from client-supplied price and qty (ST-2), and it uses the legacy Charges API.",
+      "evidence": ["server.js:39-47", "searched: idempotency|Idempotency-Key|idempotencyKey across server.js"],
+      "fix": "Create an order row server-side with a unique constraint, then pass its id as the Idempotency-Key header on the Stripe call. Move to PaymentIntents or Checkout with server-side price lookup."
+    },
+    {
+      "id": "PAY-02",
+      "status": "fail",
+      "summary": "/charge has no server-side deduplication: no order or attempt table, no lock, no unique constraint. There is no front end in the repo, so no UI protection is visible either.",
+      "evidence": ["server.js:39-47", "searched: dedupe|unique|lock|attempt across server.js"],
+      "fix": "Add a unique open payment attempt per order or cart in the database and reject or replay duplicates. Also disable the Pay button in the UI."
+    },
+    {
+      "id": "PAY-04",
+      "status": "fail",
+      "summary": "There is no Stripe webhook endpoint, so payment state is not driven by signed provider events (ST-1, ST-4). /charge just returns the Stripe response and nothing records payment state. The Stripe secret key is also hard-coded in source (a fake fixture value here; a real one would need rotating).",
+      "evidence": ["server.js:11", "server.js:39-47", "searched: webhook|constructEvent|whsec_|stripe-signature across server.js"],
+      "fix": "Add a POST /stripe/webhook route using express.raw and stripe.webhooks.constructEvent with the endpoint secret. Store processed event ids and grant entitlement only from checkout.session.completed or payment_intent.succeeded. Load keys from environment variables."
+    }
+  ]
+}

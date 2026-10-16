@@ -1,0 +1,33 @@
+{
+  "domain": "authorization",
+  "items": [
+    {
+      "id": "AUT-01",
+      "status": "fail",
+      "summary": "No route enforces authorization. /login returns the raw user id as the 'token' and no middleware verifies any session or token, so GET /invoices/:id and POST /charge are open to anyone.",
+      "evidence": ["server.js:25", "server.js:34-37", "server.js:39-47", "searched: auth|middleware|jwt|session|authorize|requireAuth in server.js"],
+      "fix": "Issue real signed session or JWT tokens at login and add an auth middleware to every non-public route (all but /signup, /login, /forgot). A human engineer should review the auth change."
+    },
+    {
+      "id": "AUT-02",
+      "status": "fail",
+      "summary": "GET /invoices/:id selects by id only, with no owner or tenant scoping, so any caller can read any invoice by changing the id (likely sequential). The id is also interpolated into the SQL string.",
+      "evidence": ["server.js:34-37"],
+      "fix": "Require authentication, then query with a parameterised statement scoped to the owner, e.g. WHERE id = $1 AND user_id = $2, and return 404 when no row matches."
+    },
+    {
+      "id": "AUT-06",
+      "status": "pass",
+      "summary": "No admin, debug, seed or make-admin endpoints exist in the repository. Only 5 public routes are present, so there is nothing to separate. This is not a sign of protection, since all routes are unauthenticated (see AUT-01).",
+      "evidence": ["server.js:13-47", "searched: admin|debug|seed|impersonat|role across server.js"],
+      "fix": ""
+    },
+    {
+      "id": "AUT-08",
+      "status": "fail",
+      "summary": "POST /charge takes price and qty from the request body and computes the charged amount from them (Stripe playbook ST-2), so a client can set any price. /signup inserts only email and hash, so there is no role or owner mass assignment there.",
+      "evidence": ["server.js:40", "server.js:44"],
+      "fix": "Accept a product or plan id, look up the price server-side (Stripe Price ids), validate qty as a bounded integer, and never use client-supplied amounts."
+    }
+  ]
+}

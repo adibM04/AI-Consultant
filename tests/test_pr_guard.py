@@ -276,6 +276,16 @@ class Packaging(unittest.TestCase):
         guard_wf = yaml.safe_load((ROOT / "templates" / "pr-guard.yml").read_text())
         self.assertNotIn("pull_request_target", guard_wf[True])
 
+    def test_pinned_release_matches_plugin_version(self):
+        version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"]
+        tag = f"v{version}"
+        self.assertIn(f"adibM04/AI-Consultant@{tag}", (ROOT / "templates" / "pr-guard.yml").read_text())
+        self.assertIn(f"adibM04/AI-Consultant@{tag}", (ROOT / "README.md").read_text())
+        self.assertIn(f"ref: {tag}", (ROOT / "templates" / "weekly-audit.yml").read_text())
+        for f in ("README.md", "templates/pr-guard.yml", "templates/weekly-audit.yml"):
+            self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(), f)
+        self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text())
+
     def test_action_does_not_interpolate_inputs_into_shell(self):
         text = (ROOT / "action.yml").read_text()
         run_block = text.split("run: |", 1)[1]
