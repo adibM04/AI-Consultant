@@ -277,11 +277,15 @@ class Packaging(unittest.TestCase):
         self.assertNotIn("pull_request_target", guard_wf[True])
 
     def test_pinned_release_matches_plugin_version(self):
+        """Docs and templates pin the release: by tag , or by a full commit SHA annotated ."""
+        import re
         version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"]
         tag = f"v{version}"
-        self.assertIn(f"adibM04/AI-Consultant@{tag}", (ROOT / "templates" / "pr-guard.yml").read_text())
-        self.assertIn(f"adibM04/AI-Consultant@{tag}", (ROOT / "README.md").read_text())
-        self.assertIn(f"ref: {tag}", (ROOT / "templates" / "weekly-audit.yml").read_text())
+        pin = re.compile(rf"adibM04/AI-Consultant@(?:{tag}|[0-9a-f]{{40}}\s+# {tag})")
+        for f in ("templates/pr-guard.yml", "README.md"):
+            self.assertRegex((ROOT / f).read_text(), pin, f)
+        ref = re.compile(rf"ref: (?:{tag}|[0-9a-f]{{40}}\s+# release {tag})")
+        self.assertRegex((ROOT / "templates" / "weekly-audit.yml").read_text(), ref)
         for f in ("README.md", "templates/pr-guard.yml", "templates/weekly-audit.yml"):
             self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(), f)
         self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text())
