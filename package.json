@@ -1,1 +1,1 @@
-{"name": "smoke", "dependencies": {"express": "4"}}
+{"name": "smoke", "dependencies": {"express": "4", "axois": "1", "smoke-test-made-up-helper-zz9": "1"}}
