@@ -1,0 +1,1 @@
+{"domain": "security", "items": [{"id": "SEC-10", "status": "pass", "evidence": ["server.js:6-7"], "summary": "cors restricted"}, {"id": "IDN-02", "status": "pass", "evidence": ["src/auth.py:3"], "summary": "reset tokens expire"}]}
