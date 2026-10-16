@@ -46,15 +46,28 @@ def finding(tool, rule, severity, file, line, message, checklist):
 
 # ---------------------------------------------------------------- normalisers
 
-def parse_gitleaks(data) -> list[dict]:
+def _still_present(root, rel) -> bool:
+    try:
+        base = root.resolve()
+        return (base / rel).resolve().is_relative_to(base) and (base / rel).is_file()
+    except (OSError, ValueError):
+        return False
+
+
+def parse_gitleaks(data, root: Path | None = None) -> list[dict]:
     out = []
     for r in data or []:
         # Deliberately ignore Secret, Match, Line (the raw source line) and Fingerprint.
         loc = r.get("File", "")
-        if r.get("Commit"):
-            loc_note = f" (in git history, commit {str(r['Commit'])[:8]})"
-        else:
+        sha = str(r.get("Commit", ""))[:8]
+        if not sha:
             loc_note = ""
+        elif root is None:
+            loc_note = f" (in git history, commit {sha})"
+        elif _still_present(root, loc):
+            loc_note = f" (committed in {sha}; the file is still in the working tree, so the secret is live in the current code)"
+        else:
+            loc_note = f" (only in git history, commit {sha}; deleting the file did not remove the secret)"
         out.append(finding("gitleaks", r.get("RuleID", "secret"), "high", loc, r.get("StartLine"),
                            (r.get("Description") or "Possible secret") + loc_note, ["SEC-01", "SEC-02"]))
     return out
@@ -113,18 +126,37 @@ def parse_trivy(data) -> list[dict]:
     return out
 
 
-_SEMGREP_MAP = (("sql", "SEC-06"), ("xss", "SEC-05"), ("csrf", "SEC-07"), ("ssrf", "SEC-08"), ("path-traversal", "SEC-08"),
-                ("open-redirect", "SEC-08"), ("cors", "SEC-10"), ("jwt", "IDN-05"), ("hardcoded", "SEC-01"), ("secret", "SEC-01"),
-                ("md5", "IDN-03"), ("sha1", "IDN-03"), ("debug", "SEC-15"), ("command-injection", "SEC-06"), ("injection", "SEC-06"))
+_SEMGREP_MAP = (("sql", "SEC-06"), ("xss", "SEC-05"), ("cross-site scripting", "SEC-05"), ("csrf", "SEC-07"),
+                ("cross-site request forgery", "SEC-07"), ("ssrf", "SEC-08"), ("server-side request forgery", "SEC-08"),
+                ("path-traversal", "SEC-08"), ("path traversal", "SEC-08"), ("open-redirect", "SEC-08"), ("open redirect", "SEC-08"),
+                ("cors", "SEC-10"), ("jwt", "IDN-05"), ("hardcoded", "SEC-01"), ("hard-coded", "SEC-01"), ("secret", "SEC-01"),
+                ("md5", "IDN-03"), ("sha1", "IDN-03"), ("debug", "SEC-15"), ("command-injection", "SEC-06"),
+                ("command injection", "SEC-06"), ("injection", "SEC-06"))
+
+
+def _semgrep_text(r: dict) -> str:
+    """Words that describe WHAT the rule is about: its own name, message and metadata.
+
+    Never the dotted prefix of check_id: for rules loaded from a local file semgrep puts the file's
+    directory there, and a folder called 'secrets' must not turn every finding into a secrets finding.
+    """
+    extra = r.get("extra") or {}
+    meta = extra.get("metadata") or {}
+    bits = [str(r.get("check_id", "")).rsplit(".", 1)[-1], str(extra.get("message", ""))]
+    for key in ("cwe", "owasp", "vulnerability_class", "category"):
+        v = meta.get(key)
+        bits += [str(x) for x in v] if isinstance(v, list) else ([str(v)] if v else [])
+    return " ".join(bits).lower()
 
 
 def parse_semgrep(data) -> list[dict]:
     out = []
     sev_map = {"ERROR": "high", "WARNING": "medium", "INFO": "low"}
     for r in (data or {}).get("results", []):
-        rule = r.get("check_id", "semgrep")
         extra = r.get("extra") or {}
-        ids = sorted({cid for key, cid in _SEMGREP_MAP if key in rule.lower()}) or ["SEC-06"]
+        text = _semgrep_text(r)
+        ids = sorted({cid for key, cid in _SEMGREP_MAP if key in text}) or ["SEC-06"]
+        rule = ".".join(str(r.get("check_id", "semgrep")).split(".")[-3:])
         out.append(finding("semgrep", rule, sev_map.get(extra.get("severity"), "medium"), r.get("path", ""),
                            (r.get("start") or {}).get("line"), extra.get("message") or rule, ids))
     return out
@@ -134,6 +166,13 @@ def parse_semgrep(data) -> list[dict]:
 
 def _run(cmd, cwd, runner):
     return runner(cmd, cwd=cwd, capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
+
+
+def _why(tool: str, proc, hint: str = "") -> str:
+    """A failure reason that is never just 'failed': exit code, stderr tail, and a plain hint."""
+    tail = (proc.stderr or "").strip()[-250:]
+    msg = f"{tool} exited {proc.returncode}" + (f": {tail}" if tail else " with no error output")
+    return (msg + (f". {hint}" if hint and not tail else ""))[:400]
 
 
 def _json_or_none(text):
@@ -152,9 +191,9 @@ def run_gitleaks(root: Path, runner=subprocess.run):
             cmd.append("--no-git")
         proc = _run(cmd, root, runner)
         if proc.returncode != 0:
-            return None, (proc.stderr or "gitleaks failed")[-300:]
+            return None, _why("gitleaks", proc)
         data = _json_or_none(report.read_text(encoding="utf-8")) if report.exists() else []
-        return parse_gitleaks(data if data is not None else []), None
+        return parse_gitleaks(data if data is not None else [], root), None
 
 
 def run_osv(root: Path, runner=subprocess.run):
@@ -172,7 +211,7 @@ def run_trivy(root: Path, runner=subprocess.run):
     proc = _run(cmd, root, runner)
     data = _json_or_none(proc.stdout)
     if proc.returncode != 0 or data is None:
-        return None, (proc.stderr or "trivy failed")[-300:]
+        return None, _why("trivy", proc, "Trivy downloads its vulnerability database on first use, so it needs network access to ghcr.io.")
     return parse_trivy(data), None
 
 
@@ -181,7 +220,7 @@ def run_semgrep(root: Path, runner=subprocess.run):
     proc = _run(cmd, root, runner)
     data = _json_or_none(proc.stdout)
     if data is None:
-        return None, (proc.stderr or "semgrep failed")[-300:]
+        return None, _why("semgrep", proc, "Usually the rule packs could not be downloaded: semgrep needs network access to semgrep.dev for p/owasp-top-ten and p/secrets.")
     return parse_semgrep(data), None
 
 

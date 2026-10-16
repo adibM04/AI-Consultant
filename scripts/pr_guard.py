@@ -193,7 +193,7 @@ def check_evidence_drift(root: Path, merge_base: str, head: str, baseline: dict,
         changed.setdefault(iid, []).extend(refs)
     if changed:
         out.append(f("medium", "evidence-changed", "Code cited as evidence for passing controls was changed",
-                     "Re-run the consultant on these controls: `/ai-consultant:consult-audit <ids>`.",
+                     "Re-run the consultant on these controls with /ai-consultant:consult-audit followed by the control ids.",
                      items=sorted(changed), files=sorted({r for v in changed.values() for r in v})))
     return out
 
@@ -262,13 +262,13 @@ def check_audit_record(root: Path, head: str, changes: list[dict], baseline: dic
 def check_staleness(root: Path, head: str, baseline: dict):
     if not baseline["has_audit"]:
         return [f("low", "no-baseline", "No audit record on the base branch",
-                  "Run `/ai-consultant:consult` and commit `.consultant/` so pull requests can be checked against it.")]
+                  "Run /ai-consultant:consult and commit the .consultant folder so pull requests can be checked against it.")]
     commit = (baseline["state"] or {}).get("commit")
     if commit:
         raw = git(root, "rev-list", "--count", f"{commit}..{head}", check=False).strip()
         if raw.isdigit() and int(raw) > STALE_COMMITS:
             return [f("low", "stale-audit", f"The last audit is {raw} commits behind",
-                      "Re-run `/ai-consultant:consult` to refresh the baseline.")]
+                      "Re-run /ai-consultant:consult to refresh the baseline.")]
     return []
 
 
@@ -302,7 +302,7 @@ def check_new_packages(root: Path, base: str, offline: bool, fetch=verify_packag
     for p in res["flagged"]:
         codes = [fl["code"] for fl in p["flags"]]
         if p["risk"] in ("high", "medium"):
-            out.append(f(p["risk"], "new-package", f"New dependency `{p['name']}` ({p['ecosystem']}) needs a look: {', '.join(codes)}",
+            out.append(f(p["risk"], "new-package", f"New dependency '{p['name']}' ({p['ecosystem']}) needs a look: {', '.join(codes)}",
                          " ".join(fl["explanation"] for fl in p["flags"])[:500], files=p["declared_in"]))
     if res["unreachable"]:
         out.append(f("low", "registry-unreachable", "Some new dependencies could not be checked",
