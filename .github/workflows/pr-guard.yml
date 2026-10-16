@@ -1,0 +1,32 @@
+# Dogfoods the composite action in this repository (uses: ./).
+# pull_request: the normal path. workflow_dispatch: lets a maintainer exercise the action on any
+# branch against any base without opening a pull request.
+name: pr-guard
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      base-ref:
+        description: "Base ref to compare against (for example origin/main or HEAD~3)"
+        required: true
+        default: "origin/main"
+      fail-on:
+        description: "high | medium | low | none"
+        required: false
+        default: "high"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./
+        with:
+          base-ref: ${{ github.event.inputs.base-ref }}
+          fail-on: ${{ github.event.inputs.fail-on || 'high' }}
