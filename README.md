@@ -28,7 +28,7 @@ Then, in your project:
 
 It detects your stack, asks a few questions about stage and data (patients? cards? EU customers? enterprise buyers?), audits 14 domains in parallel, and writes `.consultant/REPORT.md`.
 
-Needs Python 3 (standard library only). Optional: [gitleaks](https://github.com/gitleaks/gitleaks), [osv-scanner](https://github.com/google/osv-scanner) and [trivy](https://github.com/aquasecurity/trivy) make the secret and dependency checks much stronger.
+Needs Python 3 (standard library only). Optional (gitleaks and semgrep output have been checked against the real tools; osv-scanner and trivy have not yet): [gitleaks](https://github.com/gitleaks/gitleaks), [osv-scanner](https://github.com/google/osv-scanner) and [trivy](https://github.com/aquasecurity/trivy) make the secret and dependency checks much stronger.
 
 ### Other commands
 

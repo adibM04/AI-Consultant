@@ -28,6 +28,18 @@ class Normalisers(unittest.TestCase):
         self.assertIn("git history", out[0]["message"])
         self.assertNotIn(FAKE_SECRET, json.dumps(out))
 
+    def test_gitleaks_distinguishes_live_secrets_from_history_only_ones(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / "deploy.js").write_text("x")
+        raw = [{"RuleID": "r", "File": "deploy.js", "StartLine": 1, "Commit": "abcdef123456"},
+               {"RuleID": "r", "File": "gone.js", "StartLine": 1, "Commit": "abcdef123456"},
+               {"RuleID": "r", "File": "../escape.js", "StartLine": 1, "Commit": "abcdef123456"}]
+        live, gone, escaped = rs.parse_gitleaks(raw, root)
+        self.assertIn("still in the working tree", live["message"])
+        self.assertIn("only in git history", gone["message"])
+        self.assertIn("only in git history", escaped["message"])       # a path outside the project is never treated as present
+
     def test_trivy_secret_match_and_code_are_dropped(self):
         raw = {"Results": [{"Target": "app.env", "Secrets": [{"RuleID": "r", "Severity": "CRITICAL", "Title": "Stripe key",
                                                               "StartLine": 3, "Match": FAKE_SECRET, "Code": {"Lines": [FAKE_SECRET]}}],
@@ -61,6 +73,33 @@ class Normalisers(unittest.TestCase):
         out = rs.parse_semgrep(raw)
         self.assertEqual(out[0]["checklist"], ["SEC-05"])
         self.assertEqual(out[0]["severity"], "high")
+
+    def test_semgrep_real_output_shape_and_directory_prefix(self):
+        """Shape taken from real semgrep output: local rule files put their directory in check_id."""
+        raw = {"results": [
+            {"check_id": "home.me.secrets.rules.weak-md5-password-hash", "path": "server.js", "start": {"line": 15, "col": 23, "offset": 451},
+             "end": {"line": 15}, "extra": {"severity": "ERROR", "message": "MD5 is not suitable for password hashing",
+                                            "fingerprint": "x", "lines": "...", "metadata": {}, "engine_kind": "OSS"}},
+            {"check_id": "python.django.security.injection.sql.sql-injection-using-raw", "path": "views.py", "start": {"line": 3},
+             "extra": {"severity": "WARNING", "message": "Detected raw SQL", "metadata": {
+                 "cwe": ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"],
+                 "owasp": ["A03:2021 - Injection"]}}}]}
+        md5, sqli = rs.parse_semgrep(raw)
+        self.assertEqual(md5["checklist"], ["IDN-03"])             # the folder called 'secrets' must not add SEC-01
+        self.assertEqual(md5["rule"], "secrets.rules.weak-md5-password-hash")   # last three segments only
+        self.assertEqual(md5["line"], 15)
+        self.assertEqual(sqli["checklist"], ["SEC-06"])
+        self.assertEqual(sqli["severity"], "medium")
+
+    def test_silent_tool_failures_get_a_reason_and_a_hint(self):
+        proc = subprocess.CompletedProcess(["semgrep"], 2, stdout="", stderr="")
+        msg = rs._why("semgrep", proc, "network hint")
+        self.assertIn("exited 2", msg)
+        self.assertIn("no error output", msg)
+        self.assertIn("network hint", msg)
+        loud = rs._why("trivy", subprocess.CompletedProcess(["trivy"], 1, stdout="", stderr="FATAL db download failed"), "ignored hint")
+        self.assertIn("FATAL db download failed", loud)
+        self.assertNotIn("ignored hint", loud)                    # a real error message beats a guess
 
     def test_empty_inputs(self):
         self.assertEqual(rs.parse_gitleaks(None), [])

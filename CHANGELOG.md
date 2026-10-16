@@ -13,4 +13,8 @@ First release.
 - **CI**: `action.yml` PR guard (no model, no secrets) and workflow templates.
 - **Evals**: fixtures including a deliberately hostile repository, a scorer, and a headless runner; two skill scenarios. Baselines are single runs on one model, see `evals/README.md`.
 
-Not yet done: the workflow templates have not been run on GitHub Actions; scanner output parsing is tested only against fixture JSON, not real tool output.
+### Verification status (2026-10-16)
+
+- **GitHub Actions:** the `ci` workflow runs the unit tests on a clean runner for every push. The PR guard composite action has run on a real runner, on a benign range and on a deliberately hostile branch (all planted problems reported, job failed as intended). **Not yet exercised on a real pull request:** the sticky-comment step, which only runs on `pull_request` events. `templates/weekly-audit.yml` has still not been run.
+- **Scanners:** the gitleaks and semgrep parsers were checked against output from the real tools (gitleaks built from source, semgrep from PyPI with a local rule file). `osv-scanner` and `trivy` could not be installed or reach their databases in the test environment, so their parsers are still checked only against hand-written JSON. Semgrep's registry rule packs were unreachable there, so only the failure path was seen for them.
+- Fixes found by those runs: working-tree secrets were labelled as git-history ones; the sanitiser stripped our own help text; a rule file's directory could leak into the checklist mapping; silent tool failures reported only "failed".

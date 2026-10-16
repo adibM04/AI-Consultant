@@ -221,6 +221,20 @@ class Markdown(unittest.TestCase):
         for bad in ("<img", "<script", "\n# injected", "](http"):
             self.assertNotIn(bad, body)
 
+    def test_our_own_help_text_survives_sanitising(self):
+        """Real-runner output showed backticks and <ids> stripped from fixed help text."""
+        root = make_repo()
+        content = (root / "server.js").read_text().replace("line 6\n", "line six changed\n")
+        write(root, "server.js", content)
+        commit(root)
+        md = pg.to_markdown(guard(root))
+        self.assertIn("/ai-consultant:consult-audit followed by the control ids", md)
+        self.assertNotIn("  ids  ", md)
+        root2 = make_repo(with_audit=False)
+        write(root2, "x.txt", "x")
+        commit(root2)
+        self.assertIn("commit the .consultant folder", pg.to_markdown(guard(root2)))
+
     def test_pr_text_cannot_form_workflow_commands_in_the_log(self):
         out = pg.to_markdown({"changed_files": 1, "new_packages_checked": 0, "passing_controls_tracked": 0, "findings": [
             pg.f("medium", "waivers-rejected", "t", "::error::fake ::add-mask::x ##[warning]hi", items=["::set-output name=a::b"],
