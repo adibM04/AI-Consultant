@@ -45,7 +45,7 @@ Both exist to stop the tool from helping someone overclaim, so keep their invari
 
 1. Update `CHANGELOG.md`, bump `version` in `.claude-plugin/plugin.json`.
 2. Update the pinned `@vX.Y.Z` / `ref: vX.Y.Z` in `README.md` and `templates/` to the new version (a test fails if they disagree with `plugin.json`).
-3. Run the full checks, commit, then `git tag -a vX.Y.Z -m "..."` on that commit and push the branch and the tag.
+3. Run the full checks, commit and push the branch. Tag that commit (`git tag -a vX.Y.Z -m "..."`) and push the tag. If tag pushes are blocked where you work, pin the docs and templates to the full commit SHA with a `# vX.Y.Z` comment instead (the drift test accepts both) and create the tag from a machine that can.
 
 ## Run the evals
 
