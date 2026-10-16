@@ -334,7 +334,8 @@ def run(root: Path, base: str, head: str = "HEAD", offline: bool = False, fetch=
 
 def safe(text, limit=160) -> str:
     """Neutralise PR-controlled text before it goes into markdown (names are attacker-chosen)."""
-    s = re.sub(r"[`\r\n<>\[\]|]", " ", str(text)).strip()
+    s = re.sub(r"[`\r\n<>\[\]|]", " ", str(text))
+    s = s.replace("::", ": :").replace("##", "# #").strip()   # never let PR text form a GitHub workflow command in the job log
     return s[:limit] + ("…" if len(s) > limit else "")
 
 

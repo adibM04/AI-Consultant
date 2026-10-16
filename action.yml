@@ -48,9 +48,11 @@ runs:
         extra=()
         [ "${INPUT_OFFLINE}" = "true" ] && extra+=(--offline)
         out="${RUNNER_TEMP}/ai-consultant-guard.md"
+        echo "::group::AI-Consultant PR guard report"
         python3 "${ACTION_PATH}/scripts/pr_guard.py" --base "${base}" --fail-on "${INPUT_FAIL_ON}" \
-          --out-md "${out}" --out-json "${RUNNER_TEMP}/ai-consultant-guard.json" ${extra[@]+"${extra[@]}"} > /dev/null
+          --out-md "${out}" --out-json "${RUNNER_TEMP}/ai-consultant-guard.json" ${extra[@]+"${extra[@]}"}
         code=$?
+        echo "::endgroup::"
         [ -f "${out}" ] && cat "${out}" >> "${GITHUB_STEP_SUMMARY}"
         if [ "${INPUT_COMMENT}" = "true" ] && [ -f "${out}" ]; then
           GITHUB_TOKEN="${GH_TOKEN}" python3 "${ACTION_PATH}/scripts/post_comment.py" "${out}" || true

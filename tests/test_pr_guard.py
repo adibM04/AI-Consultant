@@ -221,6 +221,15 @@ class Markdown(unittest.TestCase):
         for bad in ("<img", "<script", "\n# injected", "](http"):
             self.assertNotIn(bad, body)
 
+    def test_pr_text_cannot_form_workflow_commands_in_the_log(self):
+        out = pg.to_markdown({"changed_files": 1, "new_packages_checked": 0, "passing_controls_tracked": 0, "findings": [
+            pg.f("medium", "waivers-rejected", "t", "::error::fake ::add-mask::x ##[warning]hi", items=["::set-output name=a::b"],
+                 files=["::stop-commands::tok"])]})
+        for line in out.splitlines():
+            self.assertFalse(line.strip().startswith(("::", "##[")), line)   # "### Heading" is ours and harmless; "##[" is the runner syntax
+        self.assertNotIn("::error::", out)
+        self.assertNotIn("##[", out)
+
     def test_clean_report_says_so(self):
         out = pg.to_markdown({"changed_files": 3, "new_packages_checked": 1, "passing_controls_tracked": 5, "findings": []})
         self.assertIn("no issues found", out)
