@@ -1,0 +1,61 @@
+# Live check of the three external feeds behind the advisory watch (OSV, CISA KEV, endoflife.date).
+#
+# The unit tests use fake feeds, so they cannot notice when a real API changes its shape or goes away.
+# This builds a tiny project with deliberately old, known-vulnerable pins, asks the real feeds, and
+# fails if the answers stop making sense. Manual, plus weekly so API drift shows up as a red run.
+name: feeds-smoke
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 7 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  feeds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build a deliberately vulnerable project
+        run: |
+          mkdir -p "$RUNNER_TEMP/proj"
+          cd "$RUNNER_TEMP/proj"
+          cat > package-lock.json <<'EOF'
+          {"lockfileVersion": 3, "packages": {"": {"name": "smoke"}, "node_modules/lodash": {"version": "4.17.15"}}}
+          EOF
+          printf 'Django==2.2.0\nrequests==2.19.0\n' > requirements.txt
+          cat > composer.lock <<'EOF'
+          {"packages": [{"name": "guzzlehttp/guzzle", "version": "6.3.0"}], "packages-dev": []}
+          EOF
+          echo "7.4" > .php-version
+      - name: Ask the real feeds
+        run: python3 scripts/advisories.py --root "$RUNNER_TEMP/proj" --format json --out "$RUNNER_TEMP/result.json"
+      - name: Show what came back
+        run: python3 scripts/advisories.py --render-from "$RUNNER_TEMP/result.json" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: The feeds must still answer sensibly
+        run: |
+          python3 - "$RUNNER_TEMP/result.json" <<'EOF'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          cov, alerts = r["coverage"], r["alerts"]
+          print("coverage:", json.dumps(cov))
+          failures = []
+          for feed, state in cov["feeds"].items():
+              if state != "ok":
+                  failures.append(f"feed {feed} is {state}")
+          for eco in ("npm", "pypi", "packagist"):
+              n = sum(1 for a in alerts if a["kind"] == "package-vuln" and a["ecosystem"] == eco)
+              print(f"{eco}: {n} vulnerabilities reported")
+              if n == 0:
+                  failures.append(f"no {eco} vulnerabilities for a deliberately vulnerable pin")
+          if not any(a["kind"] == "runtime-eol" and a["priority"] == 1 for a in alerts):
+              failures.append("PHP 7.4 was not reported as end of life")
+          if cov["packages_checked"] != 4:
+              failures.append(f"expected 4 pinned packages checked, got {cov['packages_checked']}")
+          if failures:
+              print("FAILED:\n- " + "\n- ".join(failures))
+              sys.exit(1)
+          print("OK: OSV, CISA KEV and endoflife.date all answered as expected")
+          EOF

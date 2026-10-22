@@ -1,0 +1,51 @@
+# Copy to .github/workflows/advisory-watch.yml in YOUR project.
+#
+# Checks once a day whether newly published security advisories affect your exact dependencies,
+# runtimes and frameworks. It keeps ONE issue up to date and adds a comment only when something NEW
+# applies. GitHub emails everyone who watches your repository (Watch, Custom, Issues) when an issue
+# or comment is created, so this is how a team gets emailed without any mail secret.
+#
+# No model, no API key, no secrets: only the built-in GITHUB_TOKEN with issues: write.
+# It sends package names, versions and ecosystem names to osv.dev (never code or file paths).
+# It reports PUBLISHED advisories for versions it can read from your lockfiles. It cannot tell you
+# that you are safe, and it says plainly what it could not check.
+name: AI-Consultant advisory watch
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: adibM04/AI-Consultant
+          ref: PLUGIN_SHA_PLACEHOLDER   # release PLUGIN_VERSION_PLACEHOLDER, pinned by commit SHA
+          path: .ai-consultant
+      - name: Move the plugin out of the scanned workspace
+        run: |
+          mv .ai-consultant "$RUNNER_TEMP/ai-consultant"
+          rm -rf "$RUNNER_TEMP/ai-consultant/.git"
+      - name: Load what was already reported
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 "$RUNNER_TEMP/ai-consultant/scripts/post_issue.py" fetch-state --out "$RUNNER_TEMP/state.json"
+      - name: Check the feeds
+        run: |
+          p="$RUNNER_TEMP/ai-consultant/scripts/advisories.py"
+          python3 "$p" --format json --state "$RUNNER_TEMP/state.json" --out "$RUNNER_TEMP/result.json"
+          python3 "$p" --render-from "$RUNNER_TEMP/result.json" --state "$RUNNER_TEMP/state.json" --format markdown --out "$RUNNER_TEMP/body.md"
+          python3 "$p" --render-from "$RUNNER_TEMP/result.json" --state "$RUNNER_TEMP/state.json" --format markdown --only-new --out "$RUNNER_TEMP/new.md"
+          python3 "$p" --render-from "$RUNNER_TEMP/result.json" --state "$RUNNER_TEMP/state.json" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Update the issue (comments only when something is new)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 "$RUNNER_TEMP/ai-consultant/scripts/post_issue.py" publish --body "$RUNNER_TEMP/body.md" --new "$RUNNER_TEMP/new.md" --result "$RUNNER_TEMP/result.json"
