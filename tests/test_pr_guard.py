@@ -358,6 +358,8 @@ class Packaging(unittest.TestCase):
         move = names.index("Move the plugin out of the audited workspace")
         audit = names.index("Run the audit")
         self.assertLess(move, audit)                                   # moved before the model runs
+        self.assertLess(names.index("Require the API key"), audit)     # a missing key fails with a plain message first
+        self.assertIn("claude.err", steps[audit]["run"])               # and a failed run shows why
         self.assertIn("$RUNNER_TEMP/ai-consultant", steps[move]["run"])
         for st in steps:                                               # inputs reach the shell only through env
             run = st.get("run", "")

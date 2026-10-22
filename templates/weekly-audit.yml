@@ -60,6 +60,10 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
       - name: Require a committed profile
         run: test -f .consultant/profile.json || { echo "::error::Run /ai-consultant:consult locally and commit .consultant/profile.json first"; exit 1; }
+      - name: Require the API key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: test -n "$ANTHROPIC_API_KEY" || { echo "::error::Add a repository secret named ANTHROPIC_API_KEY (Settings, Secrets and variables, Actions). Use a dedicated key with a low spend limit."; exit 1; }
       - name: Run the audit
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -78,7 +82,12 @@ jobs:
           claude -p "Use the ai-consultant:consult skill to audit this project. Nobody is available to answer questions, so run non-interactively: a confirmed profile already exists at .consultant/profile.json (use it unchanged). Audit these domains: ${domains}. Follow the skill exactly, including gathering facts and rendering the report. Finish with a one-line summary of the verdict." \
             --plugin-dir "$plugin" --output-format json --permission-mode acceptEdits \
             --allowedTools "Bash,Read,Grep,Glob,Write,Edit,Agent,Skill" --setting-sources project \
-            --no-session-persistence --max-budget-usd "$budget" > "$RUNNER_TEMP/claude.json"
+            --no-session-persistence --max-budget-usd "$budget" > "$RUNNER_TEMP/claude.json" 2> "$RUNNER_TEMP/claude.err" || {
+              echo "::error::claude exited with an error. The end of its output follows."
+              tail -c 1500 "$RUNNER_TEMP/claude.err" || true
+              tail -c 1500 "$RUNNER_TEMP/claude.json" || true
+              exit 1
+            }
           python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print('cost_usd', d.get('total_cost_usd'), 'turns', d.get('num_turns'))" "$RUNNER_TEMP/claude.json"
       - name: Summarise
         if: always()
