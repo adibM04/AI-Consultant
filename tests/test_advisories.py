@@ -114,6 +114,35 @@ class Severity(unittest.TestCase):
         self.assertEqual(adv.severity_label({}), "UNKNOWN")
 
 
+def django_vuln(vid, fixes, summary="Django flaw"):
+    events = [{"introduced": "0"}] + [{"fixed": f} for f in fixes]
+    return {"id": vid, "summary": summary, "aliases": [], "database_specific": {"severity": "HIGH"},
+            "affected": [{"package": {"name": "django", "ecosystem": "PyPI"}, "ranges": [{"type": "ECOSYSTEM", "events": events}]}]}
+
+
+class FixChoice(unittest.TestCase):
+    """Built from real OSV data: one fixed version is listed per release branch."""
+
+    def test_version_ordering_is_numeric_not_textual(self):
+        self.assertGreater(adv.vkey("2.2.28"), adv.vkey("2.2.4"))
+        self.assertLess(adv.vkey("1.11.23"), adv.vkey("2.2.0"))
+        self.assertGreater(adv.vkey("4.17.21"), adv.vkey("4.17.5"))
+        self.assertEqual(adv.vkey("v1.2.3-beta.1"), (1, 2, 3))
+
+    def test_django_2_2_0_is_never_told_to_move_to_1_11(self):
+        # the real mistake: sorting these as strings and taking the first told a Django 2.2 user to install 1.11
+        self.assertEqual(adv.choose_fix("2.2.0", ["1.11.23", "2.1.11", "2.2.4", "3.0.7", "4.2.16"]), ("2.2.4", False))
+
+    def test_major_jump_when_the_branch_has_no_fix(self):
+        self.assertEqual(adv.choose_fix("6.3.0", ["7.12.3", "7.15.1"]), ("7.12.3", True))
+        self.assertEqual(adv.choose_fix("2.2.0", ["4.2.16", "5.0.9", "5.1.1"]), ("4.2.16", True))
+
+    def test_nothing_above_the_installed_version_means_no_fix(self):
+        self.assertEqual(adv.choose_fix("2.2.0", ["1.11.23"]), (None, False))
+        self.assertEqual(adv.choose_fix("2.2.0", []), (None, False))
+        self.assertEqual(adv.choose_fix("2.2.0", ["2.2.0"]), (None, False))      # fixed in the version you already have: not a fix
+
+
 class Collect(unittest.TestCase):
     def run_collect(self, files, net):
         return adv.collect(project(files), adv.Feeds(net), TODAY)
@@ -131,6 +160,37 @@ class Collect(unittest.TestCase):
         self.assertEqual(vulns[0]["fixed_in"], ["4.17.19"])
         self.assertIn("Upgrade lodash to 4.17.19", vulns[0]["action"])
         self.assertEqual(r["coverage"]["packages_checked"], 2)
+
+    def test_real_world_django_shapes_end_to_end_with_rollup(self):
+        net = FakeNet(
+            osv={("django", "2.2.0"): ["GHSA-a", "GHSA-b", "GHSA-c", "GHSA-d"]},
+            vulns={"GHSA-a": django_vuln("GHSA-a", ["1.11.23", "2.2.4"], "Old flaw"),
+                   "GHSA-b": django_vuln("GHSA-b", ["2.2.28", "3.2.13", "4.0.4"], "SQL injection in Django"),
+                   "GHSA-c": django_vuln("GHSA-c", ["4.2.16", "5.0.9"], "Enumeration of e-mail addresses"),
+                   "GHSA-d": django_vuln("GHSA-d", ["1.11.9"], "Ancient flaw")})
+        r = self.run_collect({"requirements.txt": "Django==2.2.0\n"}, net)
+        by = {a["ids"][0]: a for a in r["alerts"]}
+        self.assertEqual(by["GHSA-a"]["fix"], "2.2.4")
+        self.assertEqual(by["GHSA-b"]["fix"], "2.2.28")
+        self.assertTrue(by["GHSA-c"]["major_jump"])
+        self.assertIn("major version upgrade", by["GHSA-c"]["action"])
+        self.assertIsNone(by["GHSA-d"]["fix"])
+        self.assertIn("No fixed version above 2.2.0", by["GHSA-d"]["action"])
+        for a in r["alerts"]:                                              # no advice ever points at an older version
+            if a.get("fix"):
+                self.assertGreater(adv.vkey(a["fix"]), adv.vkey(a["version"]))
+        roll = r["rollup"][0]
+        self.assertEqual((roll["package"], roll["advisories"], roll["upgrade_to"], roll["clears"], roll["needs_major_upgrade"], roll["no_fix_listed"]),
+                         ("django", 4, "2.2.28", 2, 1, 1))
+        self.assertIn("Upgrade to 2.2.28 to clear 2; 2 more need a major-version upgrade or have no fix listed.", adv.render_text(r))
+        self.assertIn("**What to upgrade first**", adv.render_markdown(r))
+
+    def test_rollup_when_only_a_major_jump_exists(self):
+        net = FakeNet(osv={("guzzlehttp/guzzle", "6.3.0"): ["GHSA-g"]},
+                      vulns={"GHSA-g": {**django_vuln("GHSA-g", ["7.12.3", "7.15.1"]), "affected": [
+                          {"package": {"name": "guzzlehttp/guzzle", "ecosystem": "Packagist"}, "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "7.12.3"}, {"fixed": "7.15.1"}]}]}]}})
+        r = self.run_collect({"composer.lock": {"packages": [{"name": "guzzlehttp/guzzle", "version": "6.3.0"}], "packages-dev": []}}, net)
+        self.assertIn("No fix in your major version; the smallest fix is 7.12.3", adv.render_text(r))
 
     def test_withdrawn_and_unknown_details_are_skipped(self):
         net = FakeNet(osv={("lodash", "4.17.15"): ["GHSA-w", "GHSA-missing"]}, vulns={"GHSA-w": {**LODASH_VULN, "id": "GHSA-w", "withdrawn": "2021-01-01"}})

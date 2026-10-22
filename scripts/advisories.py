@@ -326,6 +326,27 @@ def severity_label(vuln: dict) -> str:
     return "UNKNOWN"
 
 
+def vkey(version: str) -> tuple[int, ...]:
+    """Numeric sort key: '2.2.28' -> (2, 2, 28). Pre-release and build suffixes are ignored."""
+    return tuple(int(n) for n in re.findall(r"\d+", re.split(r"[-+_a-zA-Z]", str(version).lstrip("vV"), maxsplit=1)[0])[:5])
+
+
+def choose_fix(installed: str, fixed: list[str]) -> tuple[str | None, bool]:
+    """The nearest fixed version ABOVE the installed one, preferring the same major version.
+
+    OSV lists one fixed version per release branch (1.11.23, 2.2.4, 4.2.16...). Taking the first, or the
+    lowest, would tell a Django 2.2 user to move to 1.11, which is a downgrade. Returns (version, is_major_jump).
+    """
+    inst = vkey(installed)
+    above = sorted((vkey(f), f) for f in fixed if vkey(f) and vkey(f) > inst)
+    if not above:
+        return None, False
+    same = [f for k, f in above if k[:1] == inst[:1]]
+    if same:
+        return same[0], False
+    return above[0][1], True
+
+
 def fixed_versions(vuln: dict, package: str, ecosystem: str) -> list[str]:
     out = []
     for aff in vuln.get("affected") or []:
@@ -371,6 +392,26 @@ def eol_alert(product: str, cycle: str, exact: bool, source: str, cycles: list[d
     return None
 
 
+def rollup(alerts: list[dict]) -> list[dict]:
+    """One line per package: the single same-major upgrade that clears most of its advisories."""
+    groups: dict[tuple, list[dict]] = {}
+    for a in alerts:
+        if a["kind"] == "package-vuln":
+            groups.setdefault((a["ecosystem"], a["package"], a["version"]), []).append(a)
+    out = []
+    for (eco, name, version), items in groups.items():
+        same = [a for a in items if a.get("fix") and not a.get("major_jump")]
+        target = max((a["fix"] for a in same), key=vkey) if same else None
+        majors = [a for a in items if a.get("fix") and a.get("major_jump")]
+        out.append({"package": name, "version": version, "ecosystem": eco, "advisories": len(items),
+                    "upgrade_to": target, "clears": len(same),
+                    "needs_major_upgrade": len(majors),
+                    "smallest_major_fix": min((a["fix"] for a in majors), key=vkey) if majors and not target else None,
+                    "no_fix_listed": sum(1 for a in items if not a.get("fix")),
+                    "worst_priority": min(a["priority"] for a in items)})
+    return sorted(out, key=lambda r: (r["worst_priority"], -r["advisories"], r["package"]))
+
+
 def collect(root: Path, feeds: Feeds, today: dt.date | None = None) -> dict:
     today = today or dt.date.today()
     inv = inventory(root)
@@ -406,14 +447,16 @@ def collect(root: Path, feeds: Feeds, today: dt.date | None = None) -> dict:
                 exploited = bool(ids & kev_ids)
                 sev = severity_label(v)
                 fixed = fixed_versions(v, p["name"], ECOSYSTEM[p["ecosystem"]])
+                fix, jump = choose_fix(p["version"], fixed)
                 cves = sorted(i for i in ids if i.startswith("CVE-"))
                 prio = 0 if exploited else 1 if sev in ("CRITICAL", "HIGH") else 2 if sev == "MEDIUM" else 3
                 alerts.append({
                     "priority": prio, "kind": "package-vuln", "exploited": exploited, "severity": sev,
                     "title": f"{p['name']} {p['version']}: {(v.get('summary') or vid)[:140]}",
                     "ids": sorted(ids), "cves": cves, "package": p["name"], "version": p["version"], "ecosystem": p["ecosystem"],
-                    "fixed_in": fixed, "published": v.get("published"), "modified": v.get("modified"),
-                    "action": (f"Upgrade {p['name']} to {fixed[0]} or later." if fixed else "No fixed version is listed yet; read the advisory for a workaround."),
+                    "fixed_in": fixed, "fix": fix, "major_jump": jump, "published": v.get("published"), "modified": v.get("modified"),
+                    "action": (f"Upgrade {p['name']} to {fix} or later." + (" This is a major version upgrade: read the changelog first." if jump else "")
+                               if fix else f"No fixed version above {p['version']} is listed; read the advisory for a workaround."),
                     "source": p["source"], "url": f"https://osv.dev/vulnerability/{vid}", "key": "vuln:" + p["ecosystem"] + ":" + p["name"] + "@" + p["version"] + ":" + min(ids),
                 })
 
@@ -476,7 +519,7 @@ def collect(root: Path, feeds: Feeds, today: dt.date | None = None) -> dict:
         "runtimes_found": len(inv["runtimes"]), "eol_checks_done": runtimes_checked,
         "feeds": dict(feeds.status),
     }
-    return {"generated": today.isoformat(), "alerts": alerts, "coverage": coverage, "unpinned": inv["unpinned"][:50]}
+    return {"generated": today.isoformat(), "alerts": alerts, "rollup": rollup(alerts), "coverage": coverage, "unpinned": inv["unpinned"][:50]}
 
 
 # ------------------------------------------------------------------ state, cache, rendering
@@ -508,11 +551,25 @@ def feeds_note(cov: dict) -> list[str]:
     return notes
 
 
+def rollup_line(r: dict) -> str:
+    head = f"{r['package']} {r['version']}: {r['advisories']} advisor{'y' if r['advisories'] == 1 else 'ies'}."
+    if r["upgrade_to"]:
+        tail = f" Upgrade to {r['upgrade_to']} to clear {r['clears']}"
+        extra = r["needs_major_upgrade"] + r["no_fix_listed"]
+        tail += f"; {extra} more need a major-version upgrade or have no fix listed." if extra else "."
+        return head + tail
+    if r["smallest_major_fix"]:
+        return head + f" No fix in your major version; the smallest fix is {r['smallest_major_fix']} (a major-version upgrade: read the changelog)."
+    return head + " No fixed version above yours is listed."
+
+
 def render_text(result: dict, only_new: bool = False) -> str:
     cov, alerts = result["coverage"], result["alerts"]
     if only_new:
         alerts = [a for a in alerts if a.get("new")]
     lines = [f"Advisory watch, {result['generated']}", ""]
+    if result.get("rollup") and alerts:
+        lines += ["WHAT TO UPGRADE FIRST", ""] + [f"  {rollup_line(r)}" for r in result["rollup"]] + [""]
     if not alerts:
         lines.append("No " + ("new " if only_new else "") + "advisories matched what could be checked.")
     for prio in (0, 1, 2, 3):
@@ -535,6 +592,8 @@ def render_markdown(result: dict, only_new: bool = False) -> str:
     cov, alerts = result["coverage"], result["alerts"]
     shown = [a for a in alerts if a.get("new")] if only_new else alerts
     out = ["<!-- ai-consultant-advisories -->", f"### Security advisories affecting this project ({result['generated']})", ""]
+    if result.get("rollup") and not only_new:
+        out += ["**What to upgrade first**", ""] + [f"- {rollup_line(r)}" for r in result["rollup"]] + [""]
     if not shown:
         out.append("Nothing new matched what could be checked.")
     for prio in (0, 1, 2, 3):
