@@ -313,6 +313,37 @@ class Packaging(unittest.TestCase):
             self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(), f)
         self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text())
 
+    def test_action_script_still_reports_and_comments_when_the_guard_blocks(self):
+        """Regression: GitHub runs the step with `bash -e`; a blocking exit code used to abort the script before
+        the job summary and the PR comment. Run the real step under the runner's exact flags."""
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        import shutil
+        if not shutil.which("bash"):
+            self.skipTest("bash not available")
+        script = yaml.safe_load((ROOT / "action.yml").read_text())["runs"]["steps"][0]["run"]
+        root = make_repo()
+        write(root, ".env", "A=1\n")
+        commit(root)
+        sh(root, "git", "update-ref", "refs/remotes/origin/main", "main")
+        out = Path(tempfile.mkdtemp())
+        summary = out / "summary.md"
+        event = out / "event.json"
+        event.write_text(json.dumps({"pull_request": {"number": 7}}))
+        env = {**os.environ, "ACTION_PATH": str(ROOT), "INPUT_BASE_REF": "", "INPUT_FAIL_ON": "high", "INPUT_OFFLINE": "true",
+               "INPUT_COMMENT": "true", "BASE_BRANCH": "main", "GH_TOKEN": "", "RUNNER_TEMP": str(out),
+               "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_EVENT_PATH": str(event), "GITHUB_REPOSITORY": "o/r"}
+        proc = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", script], cwd=root, env=env,
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)          # the job still fails, as intended
+        self.assertIn("blocking", proc.stdout)
+        self.assertIn("::endgroup::", proc.stdout)                               # the log group is closed
+        self.assertTrue(summary.exists() and ".env" in summary.read_text())      # the job summary was written
+        self.assertIn("post_comment:", proc.stdout)                              # and the comment step ran (it skips without a token)
+        self.assertIn("::error::AI-Consultant PR guard reported blocking findings", proc.stdout)
+
     def test_action_does_not_interpolate_inputs_into_shell(self):
         text = (ROOT / "action.yml").read_text()
         run_block = text.split("run: |", 1)[1]
