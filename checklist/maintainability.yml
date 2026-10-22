@@ -98,3 +98,11 @@ items:
     evidence: code
     role: architect
     check: Pricing, permission and validation rules re-implemented in several files with subtle differences.
+  - id: MNT-13
+    title: Errors are handled deliberately, with no swallowed failures, unhandled rejections or half-finished operations
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: senior-engineer
+    check: Grep for empty catch blocks, catch blocks that only log and continue, promises with no await or catch, missing global handlers for unhandledRejection or uncaughtException, and async handlers whose errors never reach the framework error handler. In the money and data paths, check that a failure partway through leaves the system in a consistent state and that the customer is told. Tolerate deliberate, commented ignores.

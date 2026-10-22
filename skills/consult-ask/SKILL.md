@@ -10,7 +10,7 @@ The founder is smart but may not be technical. Answer like a trusted advisor ove
 
 ## How to answer
 
-1. Check for context: `.consultant/profile.json`, `.consultant/REPORT.md`, and the relevant `PLUGIN_ROOT/checklist/*.yml` items (`PLUGIN_ROOT` is two directories above this skill's base directory). Use the item's `tier`, `severity` and `check` to calibrate "do I need this now, later or never".
+1. Check for context: `.consultant/profile.json`, `.consultant/REPORT.md`, and the relevant `PLUGIN_ROOT/checklist/*.yml` items (`PLUGIN_ROOT` is two directories above this skill's base directory). Use the item's `tier`, `severity` and `check` to calibrate "do I need this now, later or never". For an engineering term or architecture concept ("do I need sharding?", "what is CAP?", "is Raft something I should worry about?"), read `concepts.md` next to this file. It maps the concept to its checklist item, says when scale-only ideas start to matter, and gives founder-language explanations.
 2. Where the question is about *their* product ("is my login safe?"), look at the code and cite `path:line`. Do not answer from the checklist alone when the repo can settle it.
 3. Structure: **Short answer** (yes / no / not yet / depends on X), **Why it matters to you** (the business consequence), **What to do** (the smallest sensible next step), **Who** (can you do it with AI help, or does it need a professional).
 4. Be explicit about stage. Examples of the honest answers: SOC 2 is not a day-one need, but it becomes mandatory the day a security-conscious buyer asks, and the work takes months, so start collecting evidence early. HIPAA is not optional the moment patient data is involved, and it covers vendors too.

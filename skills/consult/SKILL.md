@@ -1,6 +1,6 @@
 ---
 name: consult
-description: Run a full production-readiness audit of this codebase, as an IT consultant would. Use when a founder asks whether their app is ready for paying customers, enterprise buyers, a security review or an investor's technical diligence, or says "audit my app", "is this production ready", or "what am I missing". Interviews the founder, audits 14 domains in parallel against a 170-item checklist, and writes .consultant/REPORT.md.
+description: Run a full production-readiness audit of this codebase, as an IT consultant would. Use when a founder asks whether their app is ready for paying customers, enterprise buyers, a security review or an investor's technical diligence, or says "audit my app", "is this production ready", or "what am I missing". Interviews the founder, audits 14 domains in parallel against a 193-item checklist, and writes .consultant/REPORT.md.
 argument-hint: "[--fresh] [domain ...]"
 ---
 

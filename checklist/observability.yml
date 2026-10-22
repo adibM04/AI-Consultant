@@ -82,3 +82,11 @@ items:
     evidence: process
     role: devops
     check: Hosted on separate infrastructure from the app it reports on.
+  - id: OBS-11
+    title: A written incident response plan says who leads, how customers are told and who handles a breach notification
+    severity: high
+    tier: 2
+    when: []
+    evidence: process
+    role: tech-lead
+    check: Ask for the document. Acceptable is one page naming an incident lead, a communication channel, the status page owner, severity levels, how and when customers are told, and the legal notification deadlines that apply (for example the 72 hours in GDPR). Report unknown with a question when nothing in the repository shows it. Do not invent an answer.

@@ -158,6 +158,18 @@
           "evidence": "process",
           "role": "legal",
           "check": "Disclosure to users, human review for regulated advice (medical, legal, financial), terms that match behaviour."
+        },
+        {
+          "id": "AIF-11",
+          "title": "Prompt size is bounded, so history and documents are trimmed or summarised before they overflow the context window or run up the bill",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "ai"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Find where prompts are assembled. Fail on full chat history or whole documents appended every turn, no token counting or truncation, retrieval that returns unlimited chunks, and no handling of the provider context-length error. Check that trimming never drops the system prompt or safety instructions, and that long inputs cannot be used to push those instructions out."
         }
       ]
     },
@@ -407,6 +419,16 @@
           "evidence": "process",
           "role": "qa",
           "check": "Automated audit (axe/Lighthouse) results plus a manual pass, and a VPAT or conformance statement if buyers ask."
+        },
+        {
+          "id": "CMP-13",
+          "title": "Dependency and asset licences are known and compatible with how the product is distributed and sold",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "legal",
+          "check": "Look for a licence report or CI check over the lockfile, and inspect direct dependencies for GPL, AGPL, SSPL or non-commercial terms in a closed-source or hosted product. Fail on copied code or assets (fonts, images, icons) with no licence, and on AGPL components in a proprietary service with no review. Missing licence files in the repository are an unknown with a question. A lawyer makes the actual call."
         }
       ]
     },
@@ -613,6 +635,36 @@
           "evidence": "code",
           "role": "compliance",
           "check": "Scheduled purge jobs for logs, uploads, deleted accounts and inactive data. Compare to the stated retention period in the privacy policy."
+        },
+        {
+          "id": "DAT-20",
+          "title": "Writes that must succeed or fail together run inside a database transaction",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Find flows with more than one write (create order and decrement stock, move money, create user and workspace). Fail on separate awaited writes with no transaction, a transaction opened but the writes issued on a different connection, and external calls (email, payment, AI) made inside an open transaction. Look at what the customer would see if the second write failed."
+        },
+        {
+          "id": "DAT-21",
+          "title": "Two people or jobs updating the same record cannot silently overwrite or double-spend each other",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Look for read-modify-write sequences on balances, stock, counters, seats, coupons and status fields. Passes with atomic updates (UPDATE ... SET n = n - 1 WHERE n > 0), a version column with optimistic checks, row locks (SELECT FOR UPDATE) or a unique constraint. Fail on check-then-insert with no unique index, increments computed in application memory, and \"if not used then mark used\" without a lock."
+        },
+        {
+          "id": "DAT-22",
+          "title": "Foreign-key delete behaviour is chosen deliberately, so one delete cannot wipe unrelated data",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Read the ON DELETE rules and ORM cascade settings. Fail on CASCADE from long-lived records (customers, workspaces, invoices) down to financial or audit records, ORM cascades that delete more than intended, and delete behaviour that was simply left at the default. Restrict or soft delete is the safer choice for anything the business must keep."
         }
       ]
     },
@@ -749,6 +801,36 @@
           "evidence": "code",
           "role": "backend-engineer",
           "check": "SCIM Users/Groups endpoints, deprovisioning that also kills sessions, API keys and tokens, not just a flag nobody checks."
+        },
+        {
+          "id": "IDN-13",
+          "title": "Access tokens are signed, verified and short-lived, and refresh tokens rotate and can be revoked",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Find where JWTs or API tokens are issued and verified. Fail on verification skipped or decode-only calls, the \"none\" algorithm or an algorithm taken from the token header, a hard-coded or weak signing secret, access tokens that live for days, tokens kept in localStorage where XSS can read them, and refresh tokens that never rotate or cannot be revoked after logout or a password change. Provider-managed sessions (Auth0, Clerk, Supabase) are a pass if the app verifies their tokens with the provider's library and does not re-implement it."
+        },
+        {
+          "id": "IDN-14",
+          "title": "OAuth and social login uses a state parameter, PKCE and exact redirect URIs",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Look at the authorization-code flow the app implements or configures. Fail on a missing or unchecked state value (login CSRF), public clients without PKCE, wildcard or prefix-matched redirect URIs, tokens returned in URL fragments or query strings, and linking a social account to an existing account by email without a verified-email check. Not applicable if login is fully delegated and the app configures no redirect URIs of its own."
+        },
+        {
+          "id": "IDN-15",
+          "title": "Session cookies are HttpOnly, Secure and SameSite, and the session ID changes at login",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Find the cookie options for the session or auth cookie. Fail on a missing HttpOnly, Secure or SameSite flag, a session ID that stays the same across login or privilege change (session fixation), session IDs in URLs, and long-lived cookies with no server-side expiry. Framework defaults count if the config does not override them."
         }
       ]
     },
@@ -975,6 +1057,66 @@
           "evidence": "code",
           "role": "backend-engineer",
           "check": "A typed env schema. Silent fallbacks to test keys or localhost in production paths."
+        },
+        {
+          "id": "INF-22",
+          "title": "Databases and internal services are not reachable from the public internet",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Read security groups, firewall rules, compose files, Kubernetes services and managed-database settings. Fail on 0.0.0.0/0 open to database, cache or admin ports (5432, 3306, 6379, 27017, 9200, 22), databases with public endpoints and no allow-list, and containers publishing internal ports to the host. Private subnets with only the load balancer public is the pass. Say unknown when no infrastructure code exists."
+        },
+        {
+          "id": "INF-23",
+          "title": "App servers keep no state locally, so any instance can be replaced or added at any time",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Look for sessions, uploads, generated files, queues, rate-limit counters and caches held in process memory or on the local disk. Fail on in-memory sessions or limiters with more than one instance, user uploads written to the server filesystem, and jobs that exist only in a process array. State belongs in the database, a cache service or object storage."
+        },
+        {
+          "id": "INF-24",
+          "title": "Container images are small, run as a non-root user and are scanned before release",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Read Dockerfiles and the CI build. Fail on no USER instruction (root at runtime), the latest tag as a base image, build tools and source left in the final image (no multi-stage build), secrets copied into layers, and no image scan step in CI. Not applicable if nothing is containerised."
+        },
+        {
+          "id": "INF-25",
+          "title": "Memory and CPU are bounded and monitored, and nothing in the code grows without limit",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Look for container or platform memory and CPU limits and requests, and alerts on memory growth or restarts. In code, fail on module-level arrays, maps or caches that only ever grow, event listeners added per request and never removed, and whole files or result sets loaded into memory. A process that restarts every few days \"because it gets slow\" is the symptom."
+        },
+        {
+          "id": "INF-26",
+          "title": "Terraform and other infrastructure state is stored remotely, locked and encrypted, never committed",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Look for a remote backend with locking and encryption. Fail on terraform.tfstate or .tfstate.backup in git (state holds secrets), a local backend on a shared project, and no locking. Not applicable if there is no infrastructure as code."
+        },
+        {
+          "id": "INF-27",
+          "title": "Queue and job consumers are idempotent, because the same message will sometimes arrive twice",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Read the job and queue handlers. Passes with a unique key or processed-message table checked before the side effect, or operations that are naturally repeatable. Fail on handlers that send an email, charge, create a record or call a partner each time they run with no duplicate check, and on handlers that acknowledge before the work is done. \"Exactly once\" claims from the broker do not count as evidence."
         }
       ]
     },
@@ -1088,6 +1230,28 @@
           "evidence": "code",
           "role": "backend-engineer",
           "check": "HTTP client defaults, failure handling in user-facing paths, graceful degradation of non-critical vendors (analytics, chat widgets)."
+        },
+        {
+          "id": "API-10",
+          "title": "WebSocket and server-sent event connections are authenticated, authorised per message and origin-checked",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Find the socket or event-stream endpoints. Fail on connections accepted without authentication, channel or room subscriptions that trust a client-supplied ID without an ownership check, no Origin check (cross-site WebSocket hijacking), tokens in the URL that end up in logs, and no limits on connections, message size or message rate. Not applicable if the app has no real-time channels."
+        },
+        {
+          "id": "API-11",
+          "title": "The API uses correct HTTP status codes and methods, so clients, caches and monitors can trust them",
+          "severity": "low",
+          "tier": 2,
+          "when": [
+            "api"
+          ],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Fail on errors returned with status 200, GET or HEAD requests that change data (they get prefetched, cached and retried), POST used for safe reads that should be cacheable, and 500 returned for client mistakes so alerts fire on bad input. Check that retries are safe for PUT and DELETE and that creating endpoints use 201 or 409 deliberately."
         }
       ]
     },
@@ -1216,6 +1380,16 @@
           "evidence": "code",
           "role": "architect",
           "check": "Pricing, permission and validation rules re-implemented in several files with subtle differences."
+        },
+        {
+          "id": "MNT-13",
+          "title": "Errors are handled deliberately, with no swallowed failures, unhandled rejections or half-finished operations",
+          "severity": "high",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "senior-engineer",
+          "check": "Grep for empty catch blocks, catch blocks that only log and continue, promises with no await or catch, missing global handlers for unhandledRejection or uncaughtException, and async handlers whose errors never reach the framework error handler. In the money and data paths, check that a failure partway through leaves the system in a consistent state and that the customer is told. Tolerate deliberate, commented ignores."
         }
       ]
     },
@@ -1326,6 +1500,16 @@
           "evidence": "process",
           "role": "devops",
           "check": "Hosted on separate infrastructure from the app it reports on."
+        },
+        {
+          "id": "OBS-11",
+          "title": "A written incident response plan says who leads, how customers are told and who handles a breach notification",
+          "severity": "high",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "tech-lead",
+          "check": "Ask for the document. Acceptable is one page naming an incident lead, a communication channel, the status page owner, severity levels, how and when customers are told, and the legal notification deadlines that apply (for example the 72 hours in GDPR). Report unknown with a question when nothing in the repository shows it. Do not invent an answer."
         }
       ]
     },
@@ -1564,6 +1748,18 @@
           "evidence": "process",
           "role": "finance",
           "check": "Exports with provider IDs, ledger of every money movement, MRR definition written down."
+        },
+        {
+          "id": "PAY-14",
+          "title": "Chargebacks and disputes are detected, answered with evidence and tracked against revenue",
+          "severity": "medium",
+          "tier": 2,
+          "when": [
+            "payments"
+          ],
+          "evidence": "code",
+          "role": "finance",
+          "check": "Look for a handler for the provider dispute events (for example charge.dispute.created), a way to collect and submit evidence before the deadline, and entitlement and revenue handling for disputed charges. Fail on no dispute handling at all and on disputes that only surface in a provider dashboard nobody watches. The process side (who answers, within how many days) is unknown unless a document shows it."
         }
       ]
     },
@@ -1778,6 +1974,46 @@
           "evidence": "code",
           "role": "security",
           "check": "Signup and contact forms with captcha or proof of work, email-sending endpoints that cannot be used as spam relays."
+        },
+        {
+          "id": "SEC-21",
+          "title": "Secrets, tokens and signatures are compared in constant time",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "code",
+          "role": "security",
+          "check": "Grep for plain == or === comparisons on API keys, webhook signatures, reset tokens, HMACs and password-reset codes. Passes with timingSafeEqual, hmac.compare_digest, subtle.ConstantTimeCompare or the framework or provider SDK doing the check. Looking up a hashed token by an indexed value is fine."
+        },
+        {
+          "id": "SEC-22",
+          "title": "Request body size limits and request timeouts are set, so one oversized request cannot take the app down",
+          "severity": "medium",
+          "tier": 1,
+          "when": [],
+          "evidence": "code",
+          "role": "backend-engineer",
+          "check": "Look for body-parser or framework limits, reverse-proxy or platform limits, and server timeouts. Fail on unlimited JSON or text bodies, no cap on array or page-size parameters, regular expressions run on unbounded input, and handlers with no timeout at all. Upload size limits alone (SEC-09) do not count."
+        },
+        {
+          "id": "SEC-23",
+          "title": "A threat model for the main flows exists and is revisited when features change",
+          "severity": "medium",
+          "tier": 2,
+          "when": [],
+          "evidence": "process",
+          "role": "security",
+          "check": "Ask for the document or ticket. Acceptable is one page naming what is protected, who the attackers are, and what happens if login, payments and file handling are abused. Missing is the usual state, so this is unknown with a question rather than a fail unless the repository shows the opposite."
+        },
+        {
+          "id": "SEC-24",
+          "title": "Storage buckets are private by default and user files are served by short-lived signed URLs or an authorised endpoint",
+          "severity": "critical",
+          "tier": 1,
+          "when": [],
+          "evidence": "config",
+          "role": "devops",
+          "check": "Look at bucket policies and ACLs in IaC, SDK calls that set public-read, and code that builds permanent public URLs for private user documents. Fail on public buckets that hold customer files, signed URLs that live for days or are returned to anyone without an ownership check, and guessable object keys with no authorisation in front. Public assets by design (marketing images) are fine if they live in a separate bucket. Say unknown when only the cloud console could settle it."
         }
       ]
     },

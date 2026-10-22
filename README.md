@@ -4,11 +4,11 @@
 
 **Your vibe-coded app works on your laptop. Is it ready for a paying customer?**
 
-An open-source IT consultant for founders. It reads your code against 170 production checks and tells you what to fix first, what it can't verify, and which humans you still need.
+An open-source IT consultant for founders. It reads your code against 193 production checks and tells you what to fix first, what it can't verify, and which humans you still need.
 
 [![CI](https://github.com/adibM04/AI-Consultant/actions/workflows/ci.yml/badge.svg)](https://github.com/adibM04/AI-Consultant/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![170 checks](https://img.shields.io/badge/checks-170-informational)
+![193 checks](https://img.shields.io/badge/checks-193-informational)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A63D2)
 
 <img src="docs/assets/demo.gif" alt="A terminal replay: the AI-Consultant audit ends with a NOT READY verdict, five blockers with file and line numbers, and the roles still needed" width="780">
@@ -84,7 +84,7 @@ An AI auditor that wants to please you is worse than none. So the important rule
 
 | | |
 |---|---|
-| [What it checks](docs/checklist.md) | The 170 items in 14 domains, scoped by stage and product |
+| [What it checks](docs/checklist.md) | The 193 items in 14 domains, scoped by stage and product |
 | [How it works](docs/how-it-works.md) | The pipeline, deterministic fact-gathering, and stack playbooks for Supabase, Firebase, Next.js and Stripe |
 | [Evidence and questionnaires](docs/evidence-and-questionnaires.md) | Closing the unknowns, answering a buyer honestly |
 | [Advisory watch](docs/alerts.md) | Hear about newly published vulnerabilities and end-of-life dates that affect your stack |

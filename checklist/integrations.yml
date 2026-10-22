@@ -74,3 +74,19 @@ items:
     evidence: code
     role: backend-engineer
     check: HTTP client defaults, failure handling in user-facing paths, graceful degradation of non-critical vendors (analytics, chat widgets).
+  - id: API-10
+    title: WebSocket and server-sent event connections are authenticated, authorised per message and origin-checked
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Find the socket or event-stream endpoints. Fail on connections accepted without authentication, channel or room subscriptions that trust a client-supplied ID without an ownership check, no Origin check (cross-site WebSocket hijacking), tokens in the URL that end up in logs, and no limits on connections, message size or message rate. Not applicable if the app has no real-time channels.
+  - id: API-11
+    title: The API uses correct HTTP status codes and methods, so clients, caches and monitors can trust them
+    severity: low
+    tier: 2
+    when: [api]
+    evidence: code
+    role: backend-engineer
+    check: Fail on errors returned with status 200, GET or HEAD requests that change data (they get prefetched, cached and retried), POST used for safe reads that should be cacheable, and 500 returned for client mistakes so alerts fire on bad input. Check that retries are safe for PUT and DELETE and that creating endpoints use 201 or 409 deliberately.

@@ -29,7 +29,7 @@ Maps to: AUT-02, AUT-03, SEC-06
 - Fail when: a definer function or view returns data across users or tenants to a caller that should not see it.
 
 ## SB-5 Storage buckets and policies
-Maps to: SEC-09, AUT-02
+Maps to: SEC-09, SEC-24, AUT-02
 - Look for: buckets created with `public = true` that hold private files (invoices, IDs, medical documents); missing policies on `storage.objects`; policies that do not scope the object path to the user or tenant; no file size or MIME limits on buckets.
 - Fix: private buckets with signed URLs, policies keyed on `(storage.foldername(name))[1] = auth.uid()::text` or tenant id.
 

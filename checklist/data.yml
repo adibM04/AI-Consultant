@@ -154,3 +154,27 @@ items:
     evidence: code
     role: compliance
     check: Scheduled purge jobs for logs, uploads, deleted accounts and inactive data. Compare to the stated retention period in the privacy policy.
+  - id: DAT-20
+    title: Writes that must succeed or fail together run inside a database transaction
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Find flows with more than one write (create order and decrement stock, move money, create user and workspace). Fail on separate awaited writes with no transaction, a transaction opened but the writes issued on a different connection, and external calls (email, payment, AI) made inside an open transaction. Look at what the customer would see if the second write failed.
+  - id: DAT-21
+    title: Two people or jobs updating the same record cannot silently overwrite or double-spend each other
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Look for read-modify-write sequences on balances, stock, counters, seats, coupons and status fields. Passes with atomic updates (UPDATE ... SET n = n - 1 WHERE n > 0), a version column with optimistic checks, row locks (SELECT FOR UPDATE) or a unique constraint. Fail on check-then-insert with no unique index, increments computed in application memory, and "if not used then mark used" without a lock.
+  - id: DAT-22
+    title: Foreign-key delete behaviour is chosen deliberately, so one delete cannot wipe unrelated data
+    severity: medium
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Read the ON DELETE rules and ORM cascade settings. Fail on CASCADE from long-lived records (customers, workspaces, invoices) down to financial or audit records, ORM cascades that delete more than intended, and delete behaviour that was simply left at the default. Restrict or soft delete is the safer choice for anything the business must keep.

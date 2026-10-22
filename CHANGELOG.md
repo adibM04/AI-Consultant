@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Checklist grows from 170 to 193 items**, from a review against a list of 250 software engineering, security, systems and AI concepts that vibe-coded apps tend to miss. 23 new items, ids never reused: IDN-13 to IDN-15 (tokens, OAuth, session cookies), SEC-21 to SEC-24 (constant-time compares, request limits, threat model, private buckets), DAT-20 to DAT-22 (transactions, concurrent updates, delete cascades), INF-22 to INF-27 (exposed databases, stateless servers, container images, resource limits, Terraform state, idempotent consumers), API-10 and API-11 (real-time channels, status codes), OBS-11 (incident response plan), MNT-13 (error handling), CMP-13 (licences), PAY-14 (chargebacks), AIF-11 (context windows).
+- `skills/consult-ask/concepts.md`: where each of the 250 concepts is checked, which scale-only ideas (sharding, Raft, service meshes and others) are deliberately not checks and when they start to matter, and plain-language explanations of the rest. Scale-only concepts never fail a launch-stage audit.
+- Existing items are unchanged; saved waivers and history stay valid.
 ## 0.2.0
 
 - **Advisory watch** (`/ai-consultant:consult-alerts`, `scripts/advisories.py`): checks your exact lockfile and pinned versions against OSV, CISA's known-exploited list and endoflife.date, and says what to upgrade first. Facts come only from feeds. Unpinned packages are reported as not checked, runtime flaws as "possibly affected", an unreachable feed as incomplete, and it never says you are safe. See `docs/alerts.md`.

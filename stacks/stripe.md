@@ -29,7 +29,7 @@ Maps to: PAY-01, PAY-02
 - Look for: `idempotencyKey` (Node) / `idempotency_key` (Python) on charge, PaymentIntent, refund and transfer creation; one open attempt per order enforced by a unique constraint.
 
 ## ST-6 Lifecycle events are handled
-Maps to: PAY-07, PAY-08, PAY-09
+Maps to: PAY-07, PAY-08, PAY-09, PAY-14
 - List which events the webhook handles and compare with: `invoice.payment_failed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded`, `charge.dispute.created`, `checkout.session.completed`. Missing events mean refunds, dunning and cancellations made in the Stripe dashboard never reach your app.
 
 ## ST-7 Card data never touches your server
