@@ -67,6 +67,7 @@ It reviews. It does not rewrite your app, and it will never tell you your app is
 | `/ai-consultant:consult-audit identity payments` | Re-check specific areas after fixing things |
 | `/ai-consultant:consult-roadmap` | Turn the report into an ordered plan with sizes, owners and what is safe to do with AI |
 | `/ai-consultant:consult-ask "do I need SOC 2?"` | Plain-English advice grounded in your repo; records accepted risks with an expiry |
+| `/ai-consultant:consult-alerts` | Is anything newly vulnerable in my exact stack? Checks OSV, CISA's exploited list and end-of-life dates, optionally reminds you at session start or emails the team |
 | `/ai-consultant:consult-evidence` | Prove what code can't show (a restore test, key rotation) as a signed, expiring attestation |
 | `/ai-consultant:consult-questionnaire q.csv` | Draft an enterprise buyer's security questionnaire, capped by what the audit can prove |
 
@@ -86,6 +87,7 @@ An AI auditor that wants to please you is worse than none. So the important rule
 | [What it checks](docs/checklist.md) | The 170 items in 14 domains, scoped by stage and product |
 | [How it works](docs/how-it-works.md) | The pipeline, deterministic fact-gathering, and stack playbooks for Supabase, Firebase, Next.js and Stripe |
 | [Evidence and questionnaires](docs/evidence-and-questionnaires.md) | Closing the unknowns, answering a buyer honestly |
+| [Advisory watch](docs/alerts.md) | Hear about newly published vulnerabilities and end-of-life dates that affect your stack |
 | [CI](docs/ci.md) | A GitHub Action that checks every pull request against your last audit |
 | [Limits](docs/limits.md) | What it cannot do, and using it with other agents |
 | [Changelog](CHANGELOG.md) | What changed, and exactly what has and hasn't been verified |

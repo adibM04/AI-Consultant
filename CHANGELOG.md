@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+- **Advisory watch** (`/ai-consultant:consult-alerts`, `scripts/advisories.py`): checks your exact lockfile and pinned versions against OSV, CISA's known-exploited list and endoflife.date, and says what to upgrade first. Facts come only from feeds. Unpinned packages are reported as not checked, runtime flaws as "possibly affected", an unreachable feed as incomplete, and it never says you are safe. See `docs/alerts.md`.
+- Opt-in `SessionStart` reminder in the terminal (`hooks/hooks.json`), and `templates/advisory-watch.yml` which keeps one GitHub issue up to date and comments only on new advisories, so GitHub emails watchers without any secret.
+- `feeds-smoke` workflow: checks the real OSV, CISA and endoflife.date APIs weekly, so a changed API shows up as a red run. Its first live run found that upgrade advice pointed at older versions (OSV lists one fix per release branch); fixed, with a live assertion against it.
+- **Verified:** the feeds, live on GitHub Actions. The hook, in a real headless Claude Code session (at the event level; how the message looks on screen was not seen). **Not yet verified:** the GitHub issue and email path against a real repository (unit tests with a fake GitHub API only).
+- The items below, under the former "Unreleased" heading, ship in this version too.
+
 
 - README rewritten as a short landing page: hook, demo GIF, install, commands, why the verdict can be trusted. The detail moved to `docs/` (checklist, how it works, evidence and questionnaires, CI, limits), with nothing removed.
 - `docs/assets/demo.gif`: a replay of a real run. Counts, file references and role counts are read from `examples/real-run` by `docs/assets/make_demo_gif.py`; only the typed command and the progress lines are staged.

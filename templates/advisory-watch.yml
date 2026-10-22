@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: adibM04/AI-Consultant
-          ref: PLUGIN_SHA_PLACEHOLDER   # release PLUGIN_VERSION_PLACEHOLDER, pinned by commit SHA
+          ref: 80ab978c2e5897de6b3ae248d4f5b14a4ecf8436   # release v0.2.0, pinned by commit SHA
           path: .ai-consultant
       - name: Move the plugin out of the scanned workspace
         run: |

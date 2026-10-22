@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: adibM04/AI-Consultant@fa6dad20fa77836c602ca471d502943282c9af75  # v0.1.1
+      - uses: adibM04/AI-Consultant@80ab978c2e5897de6b3ae248d4f5b14a4ecf8436  # v0.2.0
 ```
 
 It uses **no model and no secrets**, runs safely on forked PRs, and compares the pull request to the last audit on the **base branch** (a PR cannot approve itself by editing `.consultant/`). It flags:

@@ -308,7 +308,9 @@ class Packaging(unittest.TestCase):
         for f in ("templates/pr-guard.yml", "docs/ci.md"):
             self.assertRegex((ROOT / f).read_text(), pin, f)
         ref = re.compile(r"ref: (?:" + tag + r"\b|[0-9a-f]{40}\s+# release " + tag + r"\b)")
-        self.assertRegex((ROOT / "templates" / "weekly-audit.yml").read_text(), ref)
+        for t in ("weekly-audit.yml", "advisory-watch.yml"):
+            self.assertRegex((ROOT / "templates" / t).read_text(), ref, t)
+            self.assertNotIn("PLACEHOLDER", (ROOT / "templates" / t).read_text(), t)
         for f in ("README.md", "docs/ci.md", "templates/pr-guard.yml", "templates/weekly-audit.yml"):
             self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(), f)
         self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text())

@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # needed so the base branch and merge base are available
-      # Pinned to the full commit SHA of release v0.1.1 (the strictest way to pin an action).
-      - uses: adibM04/AI-Consultant@fa6dad20fa77836c602ca471d502943282c9af75  # v0.1.1
+      # Pinned to the full commit SHA of release v0.2.0 (the strictest way to pin an action).
+      - uses: adibM04/AI-Consultant@80ab978c2e5897de6b3ae248d4f5b14a4ecf8436  # v0.2.0
         with:
           fail-on: high           # high | medium | low | none
