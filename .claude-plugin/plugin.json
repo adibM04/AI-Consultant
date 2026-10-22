@@ -1,6 +1,6 @@
 {
   "name": "ai-consultant",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An open-source IT consultant for founders. Audits a vibe-coded app against a 170-item production-readiness checklist and tells you what to fix first, what you cannot verify from code, and which humans you still need.",
   "author": {
     "name": "adibM04",
@@ -9,5 +9,13 @@
   "homepage": "https://github.com/adibM04/AI-Consultant",
   "repository": "https://github.com/adibM04/AI-Consultant",
   "license": "MIT",
-  "keywords": ["production-readiness", "audit", "security", "compliance", "checklist", "startup", "vibe-coding"]
+  "keywords": [
+    "production-readiness",
+    "audit",
+    "security",
+    "compliance",
+    "checklist",
+    "startup",
+    "vibe-coding"
+  ]
 }

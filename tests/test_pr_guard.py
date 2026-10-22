@@ -344,6 +344,35 @@ class Packaging(unittest.TestCase):
         self.assertIn("post_comment:", proc.stdout)                              # and the comment step ran (it skips without a token)
         self.assertIn("::error::AI-Consultant PR guard reported blocking findings", proc.stdout)
 
+    def test_weekly_template_keeps_its_safety_properties(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        text = (ROOT / "templates" / "weekly-audit.yml").read_text()
+        wf = yaml.safe_load(text)
+        self.assertEqual(set(wf[True]), {"schedule", "workflow_dispatch"})
+        self.assertEqual(wf["permissions"], {"contents": "read"})
+        steps = wf["jobs"]["audit"]["steps"]
+        names = [st.get("name", "") for st in steps]
+        move = names.index("Move the plugin out of the audited workspace")
+        audit = names.index("Run the audit")
+        self.assertLess(move, audit)                                   # moved before the model runs
+        self.assertIn("$RUNNER_TEMP/ai-consultant", steps[move]["run"])
+        for st in steps:                                               # inputs reach the shell only through env
+            run = st.get("run", "")
+            self.assertNotIn("${{", run, st.get("name"))
+        env = steps[audit]["env"]
+        self.assertIn("INPUT_DOMAINS", env)
+        self.assertIn("INPUT_BUDGET", env)
+        run = steps[audit]["run"]
+        self.assertIn("--max-budget-usd", run)                         # hard spending cap
+        self.assertIn("max-budget-usd must be a number", run)          # validated inputs
+        self.assertIn("domains may only contain", run)
+        self.assertIn("--plugin-dir \"$plugin\"", run)               # plugin outside the workspace
+        self.assertNotIn(".ai-consultant", " ".join(st.get("run", "") for st in steps[audit:]))  # nothing reads it from inside
+        self.assertIn("DEDICATED key", text)                           # the key-exfiltration warning stays
+
     def test_action_does_not_interpolate_inputs_into_shell(self):
         text = (ROOT / "action.yml").read_text()
         run_block = text.split("run: |", 1)[1]

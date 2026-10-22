@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+Fixes found by running the PR guard on real GitHub Actions and the scanner wrappers against real tools. **Upgrade the pinned action SHA**: 0.1.0 aborted before posting the job summary and the PR comment whenever it found something blocking.
+
+- PR guard action: no longer aborts under `bash -e` before the summary and comment; prints the report in the job log; PR-controlled text cannot form workflow commands; help text no longer loses its formatting.
+- Scanner wrappers: gitleaks findings distinguish a secret still in the working tree from one only in git history; semgrep mapping ignores a rule file's directory prefix; silent tool failures report an exit code and a hint.
+- `templates/weekly-audit.yml`: the plugin is moved out of the audited workspace before the audit, manual runs can limit domains and set a hard budget, inputs are validated, and the file warns about using a dedicated low-limit API key.
+- Not tagged: tag pushes were blocked where this was developed, so pins use the commit SHA. Create `v0.1.1` on that commit from a machine that can.
+
 ## 0.1.0
 
 First release.
