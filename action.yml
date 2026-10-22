@@ -40,7 +40,10 @@ runs:
         BASE_BRANCH: ${{ github.base_ref }}
         GH_TOKEN: ${{ github.token }}
       run: |
-        set -uo pipefail
+        # GitHub runs this with `bash -e -o pipefail`. The guard exits non-zero on purpose when it finds
+        # something blocking, so errexit must be off or the summary, the comment and the group close are skipped.
+        set -u
+        set +e
         base="${INPUT_BASE_REF:-origin/${BASE_BRANCH}}"
         if [ -z "${INPUT_BASE_REF}" ] && [ -z "${BASE_BRANCH}" ]; then
           echo "::error::No base ref. Run this on pull_request events, or set the base-ref input."; exit 2
