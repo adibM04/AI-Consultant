@@ -305,11 +305,11 @@ class Packaging(unittest.TestCase):
         version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"]
         tag = re.escape(f"v{version}")
         pin = re.compile(r"adibM04/AI-Consultant@(?:" + tag + r"\b|[0-9a-f]{40}\s+# " + tag + r"\b)")
-        for f in ("templates/pr-guard.yml", "README.md"):
+        for f in ("templates/pr-guard.yml", "docs/ci.md"):
             self.assertRegex((ROOT / f).read_text(), pin, f)
         ref = re.compile(r"ref: (?:" + tag + r"\b|[0-9a-f]{40}\s+# release " + tag + r"\b)")
         self.assertRegex((ROOT / "templates" / "weekly-audit.yml").read_text(), ref)
-        for f in ("README.md", "templates/pr-guard.yml", "templates/weekly-audit.yml"):
+        for f in ("README.md", "docs/ci.md", "templates/pr-guard.yml", "templates/weekly-audit.yml"):
             self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(), f)
         self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text())
 

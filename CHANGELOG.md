@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- README rewritten as a short landing page: hook, demo GIF, install, commands, why the verdict can be trusted. The detail moved to `docs/` (checklist, how it works, evidence and questionnaires, CI, limits), with nothing removed.
+- `docs/assets/demo.gif`: a replay of a real run. Counts, file references and role counts are read from `examples/real-run` by `docs/assets/make_demo_gif.py`; only the typed command and the progress lines are staged.
+- Tests that every relative link and image in the docs resolves, that the README stays short with the demo above the fold, and that the GIF matches the real run.
+
 ## 0.1.1
 
 Fixes found by running the PR guard on real GitHub Actions and the scanner wrappers against real tools. **Upgrade the pinned action SHA**: 0.1.0 aborted before posting the job summary and the PR comment whenever it found something blocking.
