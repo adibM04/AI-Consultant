@@ -98,3 +98,27 @@ items:
     evidence: code
     role: backend-engineer
     check: SCIM Users/Groups endpoints, deprovisioning that also kills sessions, API keys and tokens, not just a flag nobody checks.
+  - id: IDN-13
+    title: Access tokens are signed, verified and short-lived, and refresh tokens rotate and can be revoked
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Find where JWTs or API tokens are issued and verified. Fail on verification skipped or decode-only calls, the "none" algorithm or an algorithm taken from the token header, a hard-coded or weak signing secret, access tokens that live for days, tokens kept in localStorage where XSS can read them, and refresh tokens that never rotate or cannot be revoked after logout or a password change. Provider-managed sessions (Auth0, Clerk, Supabase) are a pass if the app verifies their tokens with the provider's library and does not re-implement it.
+  - id: IDN-14
+    title: OAuth and social login uses a state parameter, PKCE and exact redirect URIs
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: security
+    check: Look at the authorization-code flow the app implements or configures. Fail on a missing or unchecked state value (login CSRF), public clients without PKCE, wildcard or prefix-matched redirect URIs, tokens returned in URL fragments or query strings, and linking a social account to an existing account by email without a verified-email check. Not applicable if login is fully delegated and the app configures no redirect URIs of its own.
+  - id: IDN-15
+    title: Session cookies are HttpOnly, Secure and SameSite, and the session ID changes at login
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Find the cookie options for the session or auth cookie. Fail on a missing HttpOnly, Secure or SameSite flag, a session ID that stays the same across login or privilege change (session fixation), session IDs in URLs, and long-lived cookies with no server-side expiry. Framework defaults count if the config does not override them.

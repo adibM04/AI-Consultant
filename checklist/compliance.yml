@@ -98,3 +98,11 @@ items:
     evidence: process
     role: qa
     check: Automated audit (axe/Lighthouse) results plus a manual pass, and a VPAT or conformance statement if buyers ask.
+  - id: CMP-13
+    title: Dependency and asset licences are known and compatible with how the product is distributed and sold
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: legal
+    check: Look for a licence report or CI check over the lockfile, and inspect direct dependencies for GPL, AGPL, SSPL or non-commercial terms in a closed-source or hosted product. Fail on copied code or assets (fonts, images, icons) with no licence, and on AGPL components in a proprietary service with no review. Missing licence files in the repository are an unknown with a question. A lawyer makes the actual call.

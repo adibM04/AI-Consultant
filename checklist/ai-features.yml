@@ -82,3 +82,11 @@ items:
     evidence: process
     role: legal
     check: Disclosure to users, human review for regulated advice (medical, legal, financial), terms that match behaviour.
+  - id: AIF-11
+    title: Prompt size is bounded, so history and documents are trimmed or summarised before they overflow the context window or run up the bill
+    severity: medium
+    tier: 2
+    when: [ai]
+    evidence: code
+    role: backend-engineer
+    check: Find where prompts are assembled. Fail on full chat history or whole documents appended every turn, no token counting or truncation, retrieval that returns unlimited chunks, and no handling of the provider context-length error. Check that trimming never drops the system prompt or safety instructions, and that long inputs cannot be used to push those instructions out.

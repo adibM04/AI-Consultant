@@ -106,3 +106,11 @@ items:
     evidence: process
     role: finance
     check: Exports with provider IDs, ledger of every money movement, MRR definition written down.
+  - id: PAY-14
+    title: Chargebacks and disputes are detected, answered with evidence and tracked against revenue
+    severity: medium
+    tier: 2
+    when: [payments]
+    evidence: code
+    role: finance
+    check: Look for a handler for the provider dispute events (for example charge.dispute.created), a way to collect and submit evidence before the deadline, and entitlement and revenue handling for disputed charges. Fail on no dispute handling at all and on disputes that only surface in a provider dashboard nobody watches. The process side (who answers, within how many days) is unknown unless a document shows it.

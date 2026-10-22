@@ -170,3 +170,51 @@ items:
     evidence: code
     role: backend-engineer
     check: A typed env schema. Silent fallbacks to test keys or localhost in production paths.
+  - id: INF-22
+    title: Databases and internal services are not reachable from the public internet
+    severity: high
+    tier: 1
+    when: []
+    evidence: config
+    role: devops
+    check: Read security groups, firewall rules, compose files, Kubernetes services and managed-database settings. Fail on 0.0.0.0/0 open to database, cache or admin ports (5432, 3306, 6379, 27017, 9200, 22), databases with public endpoints and no allow-list, and containers publishing internal ports to the host. Private subnets with only the load balancer public is the pass. Say unknown when no infrastructure code exists.
+  - id: INF-23
+    title: App servers keep no state locally, so any instance can be replaced or added at any time
+    severity: medium
+    tier: 2
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Look for sessions, uploads, generated files, queues, rate-limit counters and caches held in process memory or on the local disk. Fail on in-memory sessions or limiters with more than one instance, user uploads written to the server filesystem, and jobs that exist only in a process array. State belongs in the database, a cache service or object storage.
+  - id: INF-24
+    title: Container images are small, run as a non-root user and are scanned before release
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Read Dockerfiles and the CI build. Fail on no USER instruction (root at runtime), the latest tag as a base image, build tools and source left in the final image (no multi-stage build), secrets copied into layers, and no image scan step in CI. Not applicable if nothing is containerised.
+  - id: INF-25
+    title: Memory and CPU are bounded and monitored, and nothing in the code grows without limit
+    severity: medium
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Look for container or platform memory and CPU limits and requests, and alerts on memory growth or restarts. In code, fail on module-level arrays, maps or caches that only ever grow, event listeners added per request and never removed, and whole files or result sets loaded into memory. A process that restarts every few days "because it gets slow" is the symptom.
+  - id: INF-26
+    title: Terraform and other infrastructure state is stored remotely, locked and encrypted, never committed
+    severity: high
+    tier: 2
+    when: []
+    evidence: config
+    role: devops
+    check: Look for a remote backend with locking and encryption. Fail on terraform.tfstate or .tfstate.backup in git (state holds secrets), a local backend on a shared project, and no locking. Not applicable if there is no infrastructure as code.
+  - id: INF-27
+    title: Queue and job consumers are idempotent, because the same message will sometimes arrive twice
+    severity: high
+    tier: 1
+    when: []
+    evidence: code
+    role: backend-engineer
+    check: Read the job and queue handlers. Passes with a unique key or processed-message table checked before the side effect, or operations that are naturally repeatable. Fail on handlers that send an email, charge, create a record or call a partner each time they run with no duplicate check, and on handlers that acknowledge before the work is done. "Exactly once" claims from the broker do not count as evidence.
