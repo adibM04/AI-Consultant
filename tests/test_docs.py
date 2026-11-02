@@ -1,3 +1,4 @@
+import json
 import re
 import subprocess
 import sys
@@ -53,6 +54,29 @@ class Links(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         for doc in (ROOT / "docs").glob("*.md"):
             self.assertIn(f"docs/{doc.name}", readme, f"{doc.name} is orphaned")
+
+
+class Counts(unittest.TestCase):
+    """The count is written by hand in several places, so guard it against the checklist."""
+
+    def test_documented_counts_match_the_checklist(self):
+        data = json.loads((ROOT / "checklist" / "checklist.json").read_text(encoding="utf-8"))
+        items = sum(len(d["items"]) for d in data["domains"])
+        domains = len(data["domains"])
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertTrue(f"{items} production checks" in readme,
+                        f"README.md: expected '{items} production checks'")
+        self.assertTrue(f"checks-{items}" in readme,
+                        f"README.md: expected the badge to say checks-{items}")
+        page = (ROOT / "docs" / "checklist.md").read_text(encoding="utf-8")
+        self.assertTrue(f"{items} items in {domains} domains" in page,
+                        f"docs/checklist.md: expected '{items} items in {domains} domains'")
+        plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        self.assertTrue(f"{items}-item" in plugin["description"],
+                        f".claude-plugin/plugin.json: expected a {items}-item description")
+        market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        self.assertTrue(f"{items} checks" in market["plugins"][0]["description"],
+                        f".claude-plugin/marketplace.json: expected '{items} checks'")
 
 
 class DemoGif(unittest.TestCase):
