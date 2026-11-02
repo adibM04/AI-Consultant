@@ -23,7 +23,7 @@ python  scripts/dev.py check    # Windows (or: py scripts/dev.py check)
 ```
 
 That runs exactly what CI runs: checklist schema, the generated JSON check, all unit
-tests, a sample report render, and the plugin manifests.
+tests, a freshness check on the committed sample report, and the plugin manifests.
 
 ```bash
 python3 scripts/dev.py build    # after editing checklist/*.yml, regenerate checklist/checklist.json
@@ -61,7 +61,7 @@ change the result. If you prefer the raw commands, they are the same ones in
 | What the auditor does | `agents/domain-auditor.md`, `skills/*/SKILL.md` | run the matching eval if you can |
 | The verdict rules | `scripts/render_report.py` | tests in `tests/test_render_report.py`; say why in the PR |
 | The PR guard | `scripts/pr_guard.py`, `action.yml` | `tests/test_pr_guard.py` |
-| The sample report | `examples/sample-output/` | `python3 scripts/render_report.py --dir examples/sample-output --today 2026-10-15` |
+| The sample report | `examples/sample-output/` | `python3 scripts/render_report.py --dir examples/sample-output --today 2026-10-15`, then delete `state.json`; `--check` verifies it |
 
 The long version of each rule is in [CONTRIBUTING.md](../CONTRIBUTING.md); this is the
 map, not a replacement.
@@ -95,6 +95,7 @@ Two invariants matter more than the rest:
 | Symptom | Cause | Fix |
 |---|---|---|
 | `build --check` fails | `checklist/*.yml` changed but `checklist.json` was not rebuilt | `python3 scripts/dev.py build` and commit it |
+| `sample report is fresh` fails | the committed report is stale, or a local `state.json` added a "since the last run" section | delete `examples/sample-output/state.json`, re-render, commit `REPORT.md` |
 | Tests skip | PyYAML is not installed | `pip install pyyaml`; CI always installs it |
 | `python3` not found on Windows | Windows ships `python` / `py` | use `python` (or `py`), or WSL |
 | The action test skips on Windows | it runs the composite action's `bash` script | expected; Linux and macOS cover it |

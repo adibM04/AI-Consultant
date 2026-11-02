@@ -242,6 +242,45 @@ class EndToEnd(unittest.TestCase):
             # second run reports a diff against the first
             self.assertIn("Since the last run", (base / "REPORT.md").read_text(encoding="utf-8"))
 
+    def test_check_mode_verifies_without_writing_and_ignores_state(self):
+        """A committed report must be reproducible from the repository alone, no local state."""
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / "findings").mkdir()
+            (base / "src").mkdir()
+            (base / "src" / "reset.ts").write_text("export const x = 1\n" * 10, encoding="utf-8")
+            (base / "profile.json").write_text(json.dumps({"project": "Acme", "stage": "launch", "tags": ["b2b"]}),
+                                              encoding="utf-8")
+            finding = {"domain": "identity", "items": [
+                {"id": "IDN-06", "status": "fail", "evidence": ["src/login.ts:10"], "summary": "No limiter"},
+                {"id": "IDN-02", "status": "pass", "evidence": ["src/reset.ts:5"]},
+            ]}
+            path = base / "findings" / "identity.json"
+            path.write_text(json.dumps(finding), encoding="utf-8")
+            cmd = [sys.executable, str(ROOT / "scripts" / "render_report.py"), "--dir", str(base),
+                   "--root", str(base), "--today", "2026-01-01"]
+
+            def run(*extra):
+                return subprocess.run(cmd + list(extra), capture_output=True, text=True,
+                                      encoding="utf-8", errors="replace")
+
+            r = run("--check")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)          # missing is stale, not an error
+            self.assertIn("missing", (r.stdout + r.stderr).lower())
+            self.assertFalse((base / "REPORT.md").exists())                 # wrote nothing
+            self.assertFalse((base / "state.json").exists())
+
+            self.assertEqual(run().returncode, 0)
+            before = (base / "REPORT.md").read_bytes()
+            self.assertEqual(run("--check").returncode, 0)                  # state.json exists and is ignored
+
+            finding["items"][0].update(status="pass", evidence=["src/reset.ts:5"])
+            path.write_text(json.dumps(finding), encoding="utf-8")
+            r = run("--check")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("stale", (r.stdout + r.stderr).lower())
+            self.assertEqual((base / "REPORT.md").read_bytes(), before)     # still nothing written
+
 
 class RealChecklist(unittest.TestCase):
     def setUp(self):

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import difflib
 import json
 import re
 import subprocess
@@ -507,15 +508,36 @@ def main() -> int:
     ap.add_argument("--checklist", default=DEFAULT_CHECKLIST, type=Path)
     ap.add_argument("--today", help="override date (YYYY-MM-DD), for tests")
     ap.add_argument("--ci", action="store_true", help="exit 1 when the verdict is NOT READY")
+    ap.add_argument("--check", action="store_true",
+                    help="exit 1 if REPORT.md is missing or would change; write nothing and ignore state.json")
     args = ap.parse_args()
 
     today = dt.date.fromisoformat(args.today) if args.today else dt.date.today()
     st = load_state(args.dir, args.root, args.checklist, today)
-    prev = load_json(args.dir / "state.json")
+    # The "Since the last run" section depends on a local state file. Check mode compares the
+    # committed artefact, which must be reproducible from the repository alone, so it ignores it.
+    prev = None if args.check else load_json(args.dir / "state.json")
 
     text, state = render(st["profile"], st["rows"], st["warnings"], st["waivers_expired"], prev, today, st["waivers"],
                          st["waivers_rejected"], (st["attest_expired"], st["attest_rejected"]))
-    (args.dir / "REPORT.md").write_text(text, encoding="utf-8")
+
+    target = args.dir / "REPORT.md"
+    if args.check:
+        on_disk = target.read_text(encoding="utf-8") if target.exists() else None
+        if on_disk == text:
+            print(f"OK: {target} is up to date")
+            return 0
+        print(f"{'missing' if on_disk is None else 'stale'}: {target} does not match what the renderer produces",
+              file=sys.stderr)
+        if on_disk is not None:
+            diff = difflib.unified_diff(on_disk.splitlines(), text.splitlines(),
+                                        fromfile=str(target), tofile="rendered", lineterm="", n=0)
+            for line in list(diff)[:20]:
+                print(line, file=sys.stderr)
+        print("Regenerate it without --check, with no state.json in that directory.", file=sys.stderr)
+        return 1
+
+    target.write_text(text, encoding="utf-8")
     (args.dir / "state.json").write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     print(f"{state['verdict']}: wrote {args.dir}/REPORT.md")
     for w in st["warnings"]:

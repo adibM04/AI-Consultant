@@ -7,6 +7,9 @@ __pycache__/
 # Eval results (can contain model output about fixtures)
 /evals/results/
 
+# Created when the committed sample is re-rendered; --check ignores it on purpose
+/examples/sample-output/state.json
+
 # Mascot film: generated frames, renders and node deps
 /motion/build/
 /motion/node_modules/

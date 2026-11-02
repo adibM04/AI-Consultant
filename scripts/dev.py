@@ -7,6 +7,7 @@
 Why this exists: the important checks are several commands, and a contributor on
 Windows should not have to discover that the console code page matters. This runs
 the child processes with PYTHONUTF8=1 and reports every failure, not just the first.
+It verifies the committed sample report instead of rewriting it, so CI catches drift.
 
 Requires Python 3.11+ and, for `build` and the checklist-authoring tests, PyYAML.
 Unit tests that need PyYAML skip themselves when it is missing, which matches what
@@ -30,18 +31,13 @@ SAMPLE_DATE = "2026-10-15"          # keeps examples/sample-output/REPORT.md rep
 
 
 def check_sample_report() -> int:
-    """Render a copy, so a check run never dirties the working tree.
+    """Verify the committed sample instead of rewriting it.
 
-    examples/sample-output is a committed artefact. Rendering in place would rewrite it
-    (and create state.json) on every check, hiding whether the committed copy is current.
+    --check renders in memory, ignores the local state.json, and writes nothing, so this
+    fails when the sample is stale instead of silently hiding the drift.
     """
-    import shutil
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmp:
-        dst = Path(tmp) / "sample-output"
-        shutil.copytree(ROOT / "examples" / "sample-output", dst)
-        return run([PY, "scripts/render_report.py", "--dir", str(dst), "--today", SAMPLE_DATE])
+    return run([PY, "scripts/render_report.py", "--dir", "examples/sample-output",
+                "--today", SAMPLE_DATE, "--check"])
 
 
 def check_manifest_json() -> int:
@@ -61,7 +57,7 @@ def check_steps() -> list[tuple[str, Callable[[], int]]]:
         ("checklist schema", lambda: run([PY, "scripts/checklist.py", "validate"])),
         ("generated checklist.json is fresh", lambda: run([PY, "scripts/checklist.py", "build", "--check"])),
         ("unit tests", lambda: run([PY, "-m", "unittest", "discover", "-s", "tests"])),
-        ("sample report renders", check_sample_report),
+        ("sample report is fresh", check_sample_report),
         ("plugin manifests are valid JSON", check_manifest_json),
     ]
 
