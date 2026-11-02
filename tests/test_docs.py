@@ -9,8 +9,22 @@ sys.path.insert(0, str(ROOT / "docs" / "assets"))
 
 import make_demo_gif as demo  # noqa: E402
 
-DOCS = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "CHANGELOG.md", *sorted((ROOT / "docs").glob("*.md")),
-        *sorted((ROOT / "examples" / "real-run").glob("README.md")), ROOT / "evals" / "README.md"]
+DOCS = sorted(
+    {p for p in [
+        ROOT / "README.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "CHANGELOG.md",
+        ROOT / "ROADMAP.md",
+        ROOT / "SUPPORT.md",
+        ROOT / ".github" / "CODE_OF_CONDUCT.md",
+        ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md",
+        ROOT / "evals" / "README.md",
+        *(ROOT / "docs").glob("*.md"),
+        *(ROOT / "examples").glob("*/README.md"),
+        *(ROOT / ".github" / "ISSUE_TEMPLATE").glob("*.md"),
+    ] if p.exists()},
+    key=str,
+)
 LINK = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)\)|<img[^>]+src=\"([^\"]+)\"")
 
 
