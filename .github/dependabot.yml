@@ -1,0 +1,14 @@
+version: 2
+
+# The only third-party actions this repo runs are in .github/workflows/ and action.yml.
+# A stale action is a supply-chain risk in a project whose own job is spotting them.
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - dependencies

@@ -41,3 +41,5 @@ It **cannot** replace the code: items checkable in code (injection, authorizatio
 - **Never attest on the founder's behalf from inference.** If they have not said it happened, do not record it. A plausible guess is not evidence.
 - Do not write evidence documents that state facts you were not told. Quote the founder's words; do not embellish.
 - Do not modify application code in this skill.
+
+> On Windows, if `python3` is not on PATH, run the same commands with `python`. The scripts are standard-library only; the interpreter name is the only difference.

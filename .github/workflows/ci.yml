@@ -1,26 +1,31 @@
 name: ci
+
+# One job definition, three operating systems. Contributors work on macOS and Windows
+# too, so a check that only passes on a UTF-8 Linux runner is a portability bug.
+# scripts/dev.py is the single entry point: it runs the same commands locally.
 on:
   push:
     branches: [main, master]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  checklist:
-    runs-on: ubuntu-latest
+  check:
+    name: check (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: pip install pyyaml
-      - name: Validate checklist schema
-        run: python3 scripts/checklist.py validate
-      - name: Generated JSON is up to date
-        run: python3 scripts/checklist.py build --check
-      - name: Unit tests
-        run: python3 -m unittest discover -s tests -v
-      - name: Sample report renders
-        run: python3 scripts/render_report.py --dir examples/sample-output --today 2026-10-15
-      - name: Plugin manifests are valid JSON
-        run: |
-          python3 -c "import json; [json.load(open(f)) for f in ('.claude-plugin/plugin.json', '.claude-plugin/marketplace.json')]"
+          python-version: ${{ matrix.python }}
+      - name: Install the checklist-authoring dependency
+        run: python -m pip install pyyaml
+      - name: Run every check
+        run: python scripts/dev.py check

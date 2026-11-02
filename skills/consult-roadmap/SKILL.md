@@ -32,3 +32,5 @@ Only if the founder passed `--issues` or asks for it: create one GitHub issue pe
 ## Present
 
 Summarise the first phase in chat (at most about ten bullets) and point to `.consultant/ROADMAP.md`. Offer to start on the safe items, one at a time, with the founder reviewing each change.
+
+> On Windows, if `python3` is not on PATH, run the same commands with `python`. The scripts are standard-library only; the interpreter name is the only difference.

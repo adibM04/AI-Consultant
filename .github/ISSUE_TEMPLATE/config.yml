@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read the README first
+    url: https://github.com/adibM04/AI-Consultant#readme
+    about: Install, commands, and an honest list of limits.
+  - name: What the tool cannot do
+    url: https://github.com/adibM04/AI-Consultant/blob/main/docs/limits.md
+    about: Read this before reporting that the audit missed your cloud console or contracts.
+  - name: Ask a question
+    url: https://github.com/adibM04/AI-Consultant/discussions/categories/q-a
+    about: Usage help and "how do I read this report" belong in Discussions, not the issue tracker.
+  - name: See the roadmap
+    url: https://github.com/adibM04/AI-Consultant/issues/12
+    about: What is shipped, what is next, and what the project will not do.
+  - name: Report a security problem privately
+    url: https://github.com/adibM04/AI-Consultant/security/advisories/new
+    about: Never open a public issue for something exploitable.

@@ -23,7 +23,7 @@ ITEMS = {
 def project():
     root = Path(tempfile.mkdtemp())
     (root / "docs" / "evidence").mkdir(parents=True)
-    (root / "docs" / "evidence" / "restore.md").write_text("Restored backup to staging. 14 minutes. Row counts matched.\n")
+    (root / "docs" / "evidence" / "restore.md").write_text("Restored backup to staging. 14 minutes. Row counts matched.\n", encoding="utf-8")
     return root
 
 
@@ -68,7 +68,7 @@ class Validation(unittest.TestCase):
     def test_evidence_inside_consultant_dir_is_not_accepted(self):
         root = project()
         (root / ".consultant").mkdir()
-        (root / ".consultant" / "x.md").write_text("x")
+        (root / ".consultant" / "x.md").write_text("x", encoding="utf-8")
         self.assertIn("DAT-08", self.check({"DAT-08": att(evidence=[".consultant/x.md"])}, root)[2])
 
 
@@ -106,11 +106,11 @@ class Cli(unittest.TestCase):
         self.root = project()
         c = self.root / ".consultant"
         (c / "findings").mkdir(parents=True)
-        (c / "profile.json").write_text(json.dumps({"project": "p", "stage": "launch", "tags": []}))
+        (c / "profile.json").write_text(json.dumps({"project": "p", "stage": "launch", "tags": []}), encoding="utf-8")
         self.base = [sys.executable, str(ROOT / "scripts" / "attest.py"), "--dir", str(c), "--root", str(self.root), "--today", "2026-10-15"]
 
     def run_cli(self, *args):
-        return subprocess.run(self.base + list(args), capture_output=True, text=True)
+        return subprocess.run(self.base + list(args), capture_output=True, text=True, encoding="utf-8", errors="replace")
 
     def add(self, item="DAT-08", evidence="docs/evidence/restore.md"):
         return self.run_cli("add", "--item", item, "--by", "Jane", "--note", "Restored it", "--evidence", evidence)
@@ -118,7 +118,7 @@ class Cli(unittest.TestCase):
     def test_add_list_remove_roundtrip(self):
         r = self.add()
         self.assertEqual(r.returncode, 0, r.stderr)
-        data = json.loads((self.root / ".consultant" / "attestations.json").read_text())
+        data = json.loads((self.root / ".consultant" / "attestations.json").read_text(encoding="utf-8"))
         self.assertEqual(data["DAT-08"]["expires"], "2027-10-15")
         self.assertIn("active   DAT-08", self.run_cli("list").stdout)
         self.assertEqual(self.run_cli("remove", "--item", "DAT-08").returncode, 0)
@@ -132,14 +132,14 @@ class Cli(unittest.TestCase):
 
     def test_refuses_to_override_a_failing_finding(self):
         (self.root / ".consultant" / "findings" / "d.json").write_text(json.dumps({"domain": "data", "items": [
-            {"id": "DAT-08", "status": "fail", "evidence": ["docs/evidence/restore.md"], "summary": "no restore"}]}))
+            {"id": "DAT-08", "status": "fail", "evidence": ["docs/evidence/restore.md"], "summary": "no restore"}]}), encoding="utf-8")
         r = self.add()
         self.assertEqual(r.returncode, 2)
         self.assertIn("cannot override", r.stderr)
 
     def test_refuses_evidence_that_contains_secrets_and_never_prints_them(self):
         secret = "AKIAABCDEFGHIJKLMNOP"
-        (self.root / "docs" / "evidence" / "leaky.md").write_text(f"output of env: AWS_KEY={secret}\n")
+        (self.root / "docs" / "evidence" / "leaky.md").write_text(f"output of env: AWS_KEY={secret}\n", encoding="utf-8")
         r = self.add(evidence="docs/evidence/leaky.md")
         self.assertEqual(r.returncode, 2)
         self.assertIn("AWS access key", r.stderr)
@@ -151,9 +151,9 @@ class Cli(unittest.TestCase):
                            ("password = 'correct-horse'", "password assignment"),
                            ("sk_live_abcdefghij1234", "Stripe live key")]:
             p = self.root / "docs" / "evidence" / "t.md"
-            p.write_text(text)
+            p.write_text(text, encoding="utf-8")
             self.assertIn(kind, attest.scan_for_secrets(p)[0], text)
-        p.write_text("Restored fine. Password reset flow was also tested.")
+        p.write_text("Restored fine. Password reset flow was also tested.", encoding="utf-8")
         self.assertEqual(attest.scan_for_secrets(p)[0], [])
 
     def test_binary_evidence_is_accepted_with_a_warning(self):
@@ -165,8 +165,8 @@ class Cli(unittest.TestCase):
     def test_report_picks_up_the_attestation(self):
         self.add()
         r = subprocess.run([sys.executable, str(ROOT / "scripts" / "render_report.py"), "--dir", str(self.root / ".consultant"),
-                            "--root", str(self.root), "--today", "2026-10-15"], capture_output=True, text=True)
-        report = (self.root / ".consultant" / "REPORT.md").read_text()
+                            "--root", str(self.root), "--today", "2026-10-15"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        report = (self.root / ".consultant" / "REPORT.md").read_text(encoding="utf-8")
         self.assertIn("Attested by Jane on 2026-10-15", report)
 
 

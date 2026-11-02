@@ -30,7 +30,7 @@ Then, in your project, in Claude Code:
 /ai-consultant:consult
 ```
 
-It detects your stack, asks a few questions (patients? cards? EU customers? enterprise buyers?), audits in parallel, and writes `.consultant/REPORT.md`. You can also just ask: *"is my app ready for paying customers?"* Needs Python 3, nothing else.
+It detects your stack, asks a few questions (patients? cards? EU customers? enterprise buyers?), audits in parallel, and writes `.consultant/REPORT.md`. You can also just ask: *"is my app ready for paying customers?"* Needs Python 3.11+, nothing else.
 
 <details>
 <summary><b>No project to try it on? Audit a deliberately broken app first</b></summary>
@@ -90,6 +90,8 @@ An AI auditor that wants to please you is worse than none. So the important rule
 | [Advisory watch](docs/alerts.md) | Hear about newly published vulnerabilities and end-of-life dates that affect your stack |
 | [CI](docs/ci.md) | A GitHub Action that checks every pull request against your last audit |
 | [Limits](docs/limits.md) | What it cannot do, and using it with other agents |
+| [Development](docs/development.md) | Set up locally, the one command, and where everything lives |
+| [Roadmap](ROADMAP.md) | What is shipped, what is next, and what it will not do |
 | [Changelog](CHANGELOG.md) | What changed, and exactly what has and hasn't been verified |
 
 ## Honest limits
@@ -98,7 +100,13 @@ It reads code and config, so it can't see your cloud console, contracts or who h
 
 ## Contributing
 
-The best contributions are battle scars: the failure that cost you a weekend, written as a checklist item. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The best contributions are battle scars: the failure that cost you a weekend, written
+as a checklist item. Start with [docs/development.md](docs/development.md) (one command,
+no API key), then [CONTRIBUTING.md](CONTRIBUTING.md). Small, self-contained tasks are
+labelled [good first issue](https://github.com/adibM04/AI-Consultant/labels/good%20first%20issue),
+the direction is in the [roadmap](ROADMAP.md), and questions are welcome in
+[Discussions](https://github.com/adibM04/AI-Consultant/discussions). Everyone here
+follows the [code of conduct](.github/CODE_OF_CONDUCT.md).
 
 ## License
 

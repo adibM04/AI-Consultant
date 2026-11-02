@@ -13,7 +13,7 @@ import detect_stacks as ds  # noqa: E402
 import run_scanners as rs  # noqa: E402
 
 FAKE_SECRET = "AKIAFAKEFAKEFAKE1234"
-CHECKLIST = json.loads((ROOT / "checklist" / "checklist.json").read_text())
+CHECKLIST = json.loads((ROOT / "checklist" / "checklist.json").read_text(encoding="utf-8"))
 IDS = {i["id"] for d in CHECKLIST["domains"] for i in d["items"]}
 
 
@@ -31,7 +31,7 @@ class Normalisers(unittest.TestCase):
     def test_gitleaks_distinguishes_live_secrets_from_history_only_ones(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
-        (root / "deploy.js").write_text("x")
+        (root / "deploy.js").write_text("x", encoding="utf-8")
         raw = [{"RuleID": "r", "File": "deploy.js", "StartLine": 1, "Commit": "abcdef123456"},
                {"RuleID": "r", "File": "gone.js", "StartLine": 1, "Commit": "abcdef123456"},
                {"RuleID": "r", "File": "../escape.js", "StartLine": 1, "Commit": "abcdef123456"}]
@@ -134,7 +134,7 @@ class Runner(unittest.TestCase):
         seen = {}
         def runner(cmd, **kw):
             seen["cmd"] = cmd
-            Path(cmd[cmd.index("--report-path") + 1]).write_text("[]")
+            Path(cmd[cmd.index("--report-path") + 1]).write_text("[]", encoding="utf-8")
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         rs.run_gitleaks(Path(tempfile.mkdtemp()), runner)
         self.assertIn("--redact", seen["cmd"])
@@ -143,7 +143,7 @@ class Runner(unittest.TestCase):
     def test_findings_are_capped(self):
         many = [{"RuleID": "r", "File": "f", "StartLine": i} for i in range(rs.MAX_FINDINGS_PER_TOOL + 5)]
         def runner(cmd, **kw):
-            Path(cmd[cmd.index("--report-path") + 1]).write_text(json.dumps(many))
+            Path(cmd[cmd.index("--report-path") + 1]).write_text(json.dumps(many), encoding="utf-8")
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         res = rs.run_all(Path(tempfile.mkdtemp()), ["gitleaks"], which=lambda t: "x", runner=runner)
         g = res["tools"]["gitleaks"]
@@ -152,14 +152,14 @@ class Runner(unittest.TestCase):
 
 
 class StackDetection(unittest.TestCase):
-    registry = json.loads((ROOT / "stacks" / "stacks.json").read_text())
+    registry = json.loads((ROOT / "stacks" / "stacks.json").read_text(encoding="utf-8"))
 
     def detect(self, files):
         root = Path(tempfile.mkdtemp())
         for rel, content in files.items():
             p = root / rel
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(content)
+            p.write_text(content, encoding="utf-8")
         return {d["id"] for d in ds.detect(root, self.registry)["detected"]}
 
     def test_dependencies_and_files(self):
@@ -181,19 +181,19 @@ class StackDetection(unittest.TestCase):
 
 class PlaybookIntegrity(unittest.TestCase):
     def test_registry_points_at_real_playbooks(self):
-        reg = json.loads((ROOT / "stacks" / "stacks.json").read_text())
+        reg = json.loads((ROOT / "stacks" / "stacks.json").read_text(encoding="utf-8"))
         for s in reg["stacks"]:
             self.assertTrue((ROOT / s["playbook"]).exists(), s["playbook"])
             self.assertTrue(s["detect"], s["id"])
 
     def test_every_playbook_is_registered(self):
-        reg = {Path(s["playbook"]).name for s in json.loads((ROOT / "stacks" / "stacks.json").read_text())["stacks"]}
+        reg = {Path(s["playbook"]).name for s in json.loads((ROOT / "stacks" / "stacks.json").read_text(encoding="utf-8"))["stacks"]}
         on_disk = {p.name for p in (ROOT / "stacks").glob("*.md")}
         self.assertEqual(reg, on_disk)
 
     def test_maps_to_references_real_checklist_ids(self):
         for path in (ROOT / "stacks").glob("*.md"):
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
             found = re.findall(r"^Maps to: (.+)$", text, re.M)
             self.assertTrue(found, f"{path.name} has no 'Maps to:' lines")
             for line in found:
@@ -202,13 +202,13 @@ class PlaybookIntegrity(unittest.TestCase):
 
     def test_every_check_has_a_maps_to_line(self):
         for path in (ROOT / "stacks").glob("*.md"):
-            for section in re.split(r"^## ", path.read_text(), flags=re.M)[1:]:
+            for section in re.split(r"^## ", path.read_text(encoding="utf-8"), flags=re.M)[1:]:
                 if re.match(r"[A-Z]{2}-\d", section):
                     self.assertRegex(section, r"Maps to: ", f"{path.name}: {section.splitlines()[0]}")
 
     def test_expected_findings_reference_real_ids(self):
         for fx in ("vibe-coded-app", "supabase-nextjs-app"):
-            data = json.loads((ROOT / "examples" / fx / "expected-findings.json").read_text())
+            data = json.loads((ROOT / "examples" / fx / "expected-findings.json").read_text(encoding="utf-8"))
             for e in data["must_not_pass"]:
                 self.assertIn(e["id"], IDS)
 

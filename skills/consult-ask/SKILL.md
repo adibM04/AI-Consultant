@@ -31,3 +31,5 @@ Rules: a reason, the founder's name and today's date as `created` are required; 
 
 - Never claim something is compliant, certified, or safe. Say what you checked and what you could not.
 - Never tell a founder a gap is fine because "most startups do this" when it is a critical item.
+
+> On Windows, if `python3` is not on PATH, run the same commands with `python`. The scripts are standard-library only; the interpreter name is the only difference.

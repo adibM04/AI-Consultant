@@ -51,3 +51,5 @@ Enterprise buyers send long questionnaires. The usual failure is a founder who a
 - Never change a `no` or `unknown` into a `yes` by editing `draft.csv` or by re-wording to dodge the cap. The way to a "yes" is to fix the control, re-audit, and re-render.
 - Never paste secrets, internal URLs or customer data into answers. Evidence cells reference file paths and attestations only.
 - Do not answer legal or regulatory questions (data processing terms, liability, indemnity) as if you were counsel. Mark them `unknown` and say a lawyer must answer.
+
+> On Windows, if `python3` is not on PATH, run the same commands with `python`. The scripts are standard-library only; the interpreter name is the only difference.

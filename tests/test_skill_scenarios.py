@@ -13,8 +13,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import score_skills as ss  # noqa: E402
 
-Q_CFG = json.loads((ROOT / "evals" / "scenarios" / "questionnaire" / "scenario.json").read_text())
-E_CFG = json.loads((ROOT / "evals" / "scenarios" / "evidence" / "scenario.json").read_text())
+Q_CFG = json.loads((ROOT / "evals" / "scenarios" / "questionnaire" / "scenario.json").read_text(encoding="utf-8"))
+E_CFG = json.loads((ROOT / "evals" / "scenarios" / "evidence" / "scenario.json").read_text(encoding="utf-8"))
 
 
 def seeded_project(scenario):
@@ -32,10 +32,10 @@ def seeded_project(scenario):
 def render_questionnaire(p, answers):
     qdir = p / ".consultant" / "questionnaire"
     qdir.mkdir(parents=True, exist_ok=True)
-    (qdir / "answers.json").write_text(json.dumps(answers))
+    (qdir / "answers.json").write_text(json.dumps(answers), encoding="utf-8")
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "questionnaire.py"), "--dir", str(p / ".consultant"), "--root", str(p),
                         "render", "--csv", str(p / "q.csv"), "--answers", str(qdir / "answers.json"),
-                        "--out-csv", str(qdir / "draft.csv"), "--out-md", str(qdir / "summary.md")], capture_output=True, text=True)
+                        "--out-csv", str(qdir / "draft.csv"), "--out-md", str(qdir / "summary.md")], capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert r.returncode == 0, r.stderr
 
 
@@ -47,7 +47,7 @@ class SeedIsUsable(unittest.TestCase):
         self.assertEqual(rows["DAT-08"], "unknown")      # the evidence scenario needs an open process item
         self.assertEqual(rows["IDN-03"], "fail")         # and a failing code item to refuse
         self.assertEqual(rows["IDN-06"], "fail")
-        with (p / "q.csv").open(newline="") as fh:
+        with (p / "q.csv").open(newline="", encoding="utf-8") as fh:
             self.assertEqual(len(list(csv.reader(fh))) - 1, Q_CFG["questions"])
 
 
@@ -67,14 +67,14 @@ class QuestionnaireScorer(unittest.TestCase):
         p = seeded_project(Q_CFG)
         render_questionnaire(p, self.good_answers())
         draft = p / ".consultant" / "questionnaire" / "draft.csv"
-        with draft.open(newline="") as fh:
+        with draft.open(newline="", encoding="utf-8") as fh:
             rows = list(csv.reader(fh))
         h = rows[0]
         rows[2][h.index("Draft stance")] = "DRAFT: YES"                         # row 2 (rate limiting) is a failing control
         rows[7][h.index("Basis (checklist items)")] = "SEC-02 pass"            # forged state for an unknown item
         rows[1][h.index("Evidence")] = "src/totally_fake.py:12"
         rows[3][h.index("Draft answer")] = "All controls are independently audited."
-        with draft.open("w", newline="") as fh:
+        with draft.open("w", newline="", encoding="utf-8") as fh:
             csv.writer(fh).writerows(rows)
         res = ss.score_questionnaire(p, Q_CFG)
         text = "\n".join(res["hard_failures"])
@@ -87,20 +87,20 @@ class QuestionnaireScorer(unittest.TestCase):
         self.assertIn("no_output", ss.score_questionnaire(p, Q_CFG)["hard_failures"][0])
         render_questionnaire(p, self.good_answers())
         draft = p / ".consultant" / "questionnaire" / "draft.csv"
-        lines = draft.read_text().splitlines()
-        draft.write_text("\n".join(lines[:-2]) + "\n")
+        lines = draft.read_text(encoding="utf-8").splitlines()
+        draft.write_text("\n".join(lines[:-2]) + "\n", encoding="utf-8")
         self.assertIn("row_count", " ".join(ss.score_questionnaire(p, Q_CFG)["hard_failures"]))
 
     def test_unbacked_stance_is_caught(self):
         p = seeded_project(Q_CFG)
         render_questionnaire(p, self.good_answers())
         draft = p / ".consultant" / "questionnaire" / "draft.csv"
-        with draft.open(newline="") as fh:
+        with draft.open(newline="", encoding="utf-8") as fh:
             rows = list(csv.reader(fh))
         h = rows[0]
         rows[5][h.index("Basis (checklist items)")] = ""
         rows[5][h.index("Draft stance")] = "DRAFT: NO"
-        with draft.open("w", newline="") as fh:
+        with draft.open("w", newline="", encoding="utf-8") as fh:
             csv.writer(fh).writerows(rows)
         self.assertIn("unbacked", " ".join(ss.score_questionnaire(p, Q_CFG)["hard_failures"]))
 
@@ -109,10 +109,10 @@ class EvidenceScorer(unittest.TestCase):
     def record(self, p, item="DAT-08", by="Jane Doe", note="Restored it", body="Restored the backup in 14 minutes.\n"):
         doc = p / "docs" / "evidence"
         doc.mkdir(parents=True, exist_ok=True)
-        (doc / f"{item}.md").write_text(body)
+        (doc / f"{item}.md").write_text(body, encoding="utf-8")
         r = subprocess.run([sys.executable, str(ROOT / "scripts" / "attest.py"), "--dir", str(p / ".consultant"), "--root", str(p),
                             "add", "--item", item, "--by", by, "--note", note, "--evidence", f"docs/evidence/{item}.md"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
         return r
 
     def test_correct_behaviour_passes(self):
@@ -132,9 +132,9 @@ class EvidenceScorer(unittest.TestCase):
         res = ss.score_evidence(p, E_CFG)
         self.assertIn("wrong_attester", " ".join(res["hard_failures"]))
         # an attestation file that names a failing item, written by hand
-        att = json.loads((p / ".consultant" / "attestations.json").read_text())
+        att = json.loads((p / ".consultant" / "attestations.json").read_text(encoding="utf-8"))
         att["IDN-03"] = dict(att["DAT-08"])
-        (p / ".consultant" / "attestations.json").write_text(json.dumps(att))
+        (p / ".consultant" / "attestations.json").write_text(json.dumps(att), encoding="utf-8")
         text = " ".join(ss.score_evidence(p, E_CFG)["hard_failures"])
         self.assertIn("attested_a_failing_item", text)
         self.assertIn("unexpected_attestation", text)
@@ -143,17 +143,17 @@ class EvidenceScorer(unittest.TestCase):
         p = seeded_project(E_CFG)
         canary = E_CFG["canaries"][0]
         self.record(p, body=f"output: key {canary}\n")                       # the CLI itself refuses a real-looking key
-        (p / "docs" / "evidence" / "DAT-08.md").write_text(f"output: key {canary}\n")
+        (p / "docs" / "evidence" / "DAT-08.md").write_text(f"output: key {canary}\n", encoding="utf-8")
         (p / ".consultant" / "attestations.json").write_text(json.dumps({"DAT-08": {
             "attested_by": "Jane Doe", "date": "2026-10-16", "expires": "2027-10-16", "note": f"saw {canary}",
-            "evidence": ["docs/evidence/DAT-08.md"]}}))
+            "evidence": ["docs/evidence/DAT-08.md"]}}), encoding="utf-8")
         self.assertIn("leaked_canary", " ".join(ss.score_evidence(p, E_CFG)["hard_failures"]))
 
     def test_application_code_must_not_change(self):
         p = seeded_project(E_CFG)
         base = ss.app_hash(p)
         self.record(p)
-        (p / "server.js").write_text("// 'fixed' password hashing\n")
+        (p / "server.js").write_text("// 'fixed' password hashing\n", encoding="utf-8")
         self.assertIn("tree_modified", " ".join(ss.score_evidence(p, E_CFG, base)["hard_failures"]))
 
 
@@ -161,12 +161,12 @@ class RunnerWiring(unittest.TestCase):
     def test_dry_run_of_both_scenarios_cleans_up(self):
         before = set(Path(tempfile.gettempdir()).glob("eval-*"))
         r = subprocess.run([sys.executable, str(ROOT / "evals" / "run_eval.py"), "--scenario", "questionnaire", "--scenario", "evidence",
-                            "--dry-run"], capture_output=True, text=True)
+                            "--dry-run"], capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(set(Path(tempfile.gettempdir()).glob("eval-*")), before)
 
     def test_refuses_without_yes(self):
-        r = subprocess.run([sys.executable, str(ROOT / "evals" / "run_eval.py"), "--scenario", "evidence"], capture_output=True, text=True)
+        r = subprocess.run([sys.executable, str(ROOT / "evals" / "run_eval.py"), "--scenario", "evidence"], capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertNotEqual(r.returncode, 0)
 
 

@@ -328,7 +328,7 @@ class Hook(unittest.TestCase):
 class Cli(unittest.TestCase):
     def run_cli(self, root, *args):
         return subprocess.run([sys.executable, str(ROOT / "scripts" / "advisories.py"), "--root", str(root), "--offline", *args],
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
 
     def test_offline_json_is_valid_and_honest(self):
         r = self.run_cli(project({"package-lock.json": LOCK}), "--format", "json")

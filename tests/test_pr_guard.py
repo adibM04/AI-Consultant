@@ -107,7 +107,7 @@ class Guard(unittest.TestCase):
 
     def test_full_scenario(self):
         root = make_repo()
-        content = (root / "server.js").read_text().replace("line 6\n", "line six changed\n")
+        content = (root / "server.js").read_text(encoding="utf-8").replace("line 6\n", "line six changed\n")
         write(root, "server.js", content)                                  # edits a cited line
         sh(root, "git", "rm", "-q", "src/auth.py")                          # deletes cited evidence
         write(root, ".env", "KEY=value\n")
@@ -133,7 +133,7 @@ class Guard(unittest.TestCase):
 
     def test_edit_outside_cited_lines_is_ignored(self):
         root = make_repo()
-        content = (root / "server.js").read_text().replace("line 15\n", "line fifteen\n")
+        content = (root / "server.js").read_text(encoding="utf-8").replace("line 15\n", "line fifteen\n")
         write(root, "server.js", content)
         commit(root)
         self.assertNotIn("evidence-changed", kinds(guard(root)))
@@ -166,7 +166,7 @@ class Guard(unittest.TestCase):
     def test_stale_audit(self):
         base_sha = None
         root = make_repo(state={"verdict": "NOT READY"})
-        base_sha = subprocess.run(["git", "rev-parse", "main"], cwd=root, capture_output=True, text=True).stdout.strip()
+        base_sha = subprocess.run(["git", "rev-parse", "main"], cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
         sh(root, "git", "checkout", "-q", "main")
         write(root, ".consultant/state.json", json.dumps({"verdict": "NOT READY", "commit": base_sha}))
         commit(root, "record audit commit")
@@ -204,9 +204,9 @@ class Guard(unittest.TestCase):
         write(root, ".env", "A=1\n")
         commit(root)
         cmd = [sys.executable, str(ROOT / "scripts" / "pr_guard.py"), "--base", "main", "--root", str(root), "--offline"]
-        self.assertEqual(subprocess.run(cmd, capture_output=True, text=True).returncode, 1)
-        self.assertEqual(subprocess.run(cmd + ["--fail-on", "none"], capture_output=True, text=True).returncode, 0)
-        bad = subprocess.run(cmd[:-3] + ["--base", "nope", "--root", str(root)], capture_output=True, text=True)
+        self.assertEqual(subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace").returncode, 1)
+        self.assertEqual(subprocess.run(cmd + ["--fail-on", "none"], capture_output=True, text=True, encoding="utf-8", errors="replace").returncode, 0)
+        bad = subprocess.run(cmd[:-3] + ["--base", "nope", "--root", str(root)], capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(bad.returncode, 2)
         self.assertIn("fetch-depth", bad.stderr)
 
@@ -224,7 +224,7 @@ class Markdown(unittest.TestCase):
     def test_our_own_help_text_survives_sanitising(self):
         """Real-runner output showed backticks and <ids> stripped from fixed help text."""
         root = make_repo()
-        content = (root / "server.js").read_text().replace("line 6\n", "line six changed\n")
+        content = (root / "server.js").read_text(encoding="utf-8").replace("line 6\n", "line six changed\n")
         write(root, "server.js", content)
         commit(root)
         md = pg.to_markdown(guard(root))
@@ -276,7 +276,7 @@ class Comment(unittest.TestCase):
 
     def test_missing_env_and_non_pr_events_skip_quietly(self):
         r = subprocess.run([sys.executable, str(ROOT / "scripts" / "post_comment.py"), "x.md"], capture_output=True, text=True,
-                           env={k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")})
+                           env={k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")}, encoding="utf-8", errors="replace")
         self.assertEqual(r.returncode, 0)
         self.assertIn("skipping", r.stdout)
 
@@ -287,33 +287,33 @@ class Packaging(unittest.TestCase):
             import yaml
         except ImportError:
             self.skipTest("PyYAML not installed")
-        action = yaml.safe_load((ROOT / "action.yml").read_text())
+        action = yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))
         self.assertEqual(action["runs"]["using"], "composite")
         self.assertEqual(set(action["inputs"]), {"base-ref", "fail-on", "offline", "comment"})
         for t in ("pr-guard.yml", "weekly-audit.yml"):
-            wf = yaml.safe_load((ROOT / "templates" / t).read_text())
+            wf = yaml.safe_load((ROOT / "templates" / t).read_text(encoding="utf-8"))
             self.assertIn("permissions", wf)
-        weekly = yaml.safe_load((ROOT / "templates" / "weekly-audit.yml").read_text())
+        weekly = yaml.safe_load((ROOT / "templates" / "weekly-audit.yml").read_text(encoding="utf-8"))
         triggers = set(weekly[True])  # PyYAML parses the key `on` as boolean True
         self.assertEqual(triggers, {"schedule", "workflow_dispatch"})   # never pull_request
-        guard_wf = yaml.safe_load((ROOT / "templates" / "pr-guard.yml").read_text())
+        guard_wf = yaml.safe_load((ROOT / "templates" / "pr-guard.yml").read_text(encoding="utf-8"))
         self.assertNotIn("pull_request_target", guard_wf[True])
 
     def test_pinned_release_matches_plugin_version(self):
         """Docs and templates pin the release: by tag `vX.Y.Z`, or by a full commit SHA annotated `# vX.Y.Z`."""
         import re
-        version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"]
+        version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
         tag = re.escape(f"v{version}")
         pin = re.compile(r"adibM04/AI-Consultant@(?:" + tag + r"\b|[0-9a-f]{40}\s+# " + tag + r"\b)")
         for f in ("templates/pr-guard.yml", "docs/ci.md"):
-            self.assertRegex((ROOT / f).read_text(), pin, f)
+            self.assertRegex((ROOT / f).read_text(encoding="utf-8"), pin, f)
         ref = re.compile(r"ref: (?:" + tag + r"\b|[0-9a-f]{40}\s+# release " + tag + r"\b)")
         for t in ("weekly-audit.yml", "advisory-watch.yml"):
-            self.assertRegex((ROOT / "templates" / t).read_text(), ref, t)
-            self.assertNotIn("PLACEHOLDER", (ROOT / "templates" / t).read_text(), t)
+            self.assertRegex((ROOT / "templates" / t).read_text(encoding="utf-8"), ref, t)
+            self.assertNotIn("PLACEHOLDER", (ROOT / "templates" / t).read_text(encoding="utf-8"), t)
         for f in ("README.md", "docs/ci.md", "templates/pr-guard.yml", "templates/weekly-audit.yml"):
-            self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(), f)
-        self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text())
+            self.assertNotIn("AI-Consultant@main", (ROOT / f).read_text(encoding="utf-8"), f)
+        self.assertIn(f"## {version}", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
 
     def test_action_script_still_reports_and_comments_when_the_guard_blocks(self):
         """Regression: GitHub runs the step with `bash -e`; a blocking exit code used to abort the script before
@@ -323,9 +323,11 @@ class Packaging(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         import shutil
+        if os.name == "nt":
+            self.skipTest("the action is a bash script; plain `bash` on Windows is WSL and cannot run a C: path")
         if not shutil.which("bash"):
             self.skipTest("bash not available")
-        script = yaml.safe_load((ROOT / "action.yml").read_text())["runs"]["steps"][0]["run"]
+        script = yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))["runs"]["steps"][0]["run"]
         root = make_repo()
         write(root, ".env", "A=1\n")
         commit(root)
@@ -333,16 +335,16 @@ class Packaging(unittest.TestCase):
         out = Path(tempfile.mkdtemp())
         summary = out / "summary.md"
         event = out / "event.json"
-        event.write_text(json.dumps({"pull_request": {"number": 7}}))
+        event.write_text(json.dumps({"pull_request": {"number": 7}}), encoding="utf-8")
         env = {**os.environ, "ACTION_PATH": str(ROOT), "INPUT_BASE_REF": "", "INPUT_FAIL_ON": "high", "INPUT_OFFLINE": "true",
                "INPUT_COMMENT": "true", "BASE_BRANCH": "main", "GH_TOKEN": "", "RUNNER_TEMP": str(out),
                "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_EVENT_PATH": str(event), "GITHUB_REPOSITORY": "o/r"}
         proc = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", script], cwd=root, env=env,
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)          # the job still fails, as intended
         self.assertIn("blocking", proc.stdout)
         self.assertIn("::endgroup::", proc.stdout)                               # the log group is closed
-        self.assertTrue(summary.exists() and ".env" in summary.read_text())      # the job summary was written
+        self.assertTrue(summary.exists() and ".env" in summary.read_text(encoding="utf-8"))      # the job summary was written
         self.assertIn("post_comment:", proc.stdout)                              # and the comment step ran (it skips without a token)
         self.assertIn("::error::AI-Consultant PR guard reported blocking findings", proc.stdout)
 
@@ -351,7 +353,7 @@ class Packaging(unittest.TestCase):
             import yaml
         except ImportError:
             self.skipTest("PyYAML not installed")
-        text = (ROOT / "templates" / "weekly-audit.yml").read_text()
+        text = (ROOT / "templates" / "weekly-audit.yml").read_text(encoding="utf-8")
         wf = yaml.safe_load(text)
         self.assertEqual(set(wf[True]), {"schedule", "workflow_dispatch"})
         self.assertEqual(wf["permissions"], {"contents": "read"})
@@ -378,7 +380,7 @@ class Packaging(unittest.TestCase):
         self.assertIn("DEDICATED key", text)                           # the key-exfiltration warning stays
 
     def test_action_does_not_interpolate_inputs_into_shell(self):
-        text = (ROOT / "action.yml").read_text()
+        text = (ROOT / "action.yml").read_text(encoding="utf-8")
         run_block = text.split("run: |", 1)[1]
         self.assertNotIn("${{", run_block)   # inputs reach the shell only through env vars
 

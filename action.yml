@@ -48,17 +48,19 @@ runs:
         if [ -z "${INPUT_BASE_REF}" ] && [ -z "${BASE_BRANCH}" ]; then
           echo "::error::No base ref. Run this on pull_request events, or set the base-ref input."; exit 2
         fi
+        # Git Bash on a Windows runner has `python`, not `python3`; Linux and macOS usually have both.
+        PY="$(command -v python3 || command -v python)"
         extra=()
         [ "${INPUT_OFFLINE}" = "true" ] && extra+=(--offline)
         out="${RUNNER_TEMP}/ai-consultant-guard.md"
         echo "::group::AI-Consultant PR guard report"
-        python3 "${ACTION_PATH}/scripts/pr_guard.py" --base "${base}" --fail-on "${INPUT_FAIL_ON}" \
+        "${PY}" "${ACTION_PATH}/scripts/pr_guard.py" --base "${base}" --fail-on "${INPUT_FAIL_ON}" \
           --out-md "${out}" --out-json "${RUNNER_TEMP}/ai-consultant-guard.json" ${extra[@]+"${extra[@]}"}
         code=$?
         echo "::endgroup::"
         [ -f "${out}" ] && cat "${out}" >> "${GITHUB_STEP_SUMMARY}"
         if [ "${INPUT_COMMENT}" = "true" ] && [ -f "${out}" ]; then
-          GITHUB_TOKEN="${GH_TOKEN}" python3 "${ACTION_PATH}/scripts/post_comment.py" "${out}" || true
+          GITHUB_TOKEN="${GH_TOKEN}" "${PY}" "${ACTION_PATH}/scripts/post_comment.py" "${out}" || true
         fi
         if [ "${code}" -ne 0 ]; then
           echo "::error::AI-Consultant PR guard reported blocking findings (exit ${code}). See the job summary."
