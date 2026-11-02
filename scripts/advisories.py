@@ -38,6 +38,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import console  # noqa: E402
 import verify_packages  # noqa: E402  (shared SKIP_DIRS)
 
 USER_AGENT = "ai-consultant-advisories/0.1 (+https://github.com/adibM04/AI-Consultant)"
@@ -652,6 +653,7 @@ def run_hook(root: Path, fetch=http, now: float | None = None, today: dt.date | 
 
 
 def main() -> int:
+    console.use_utf8()          # the markdown form contains emoji; a cp1252 console must not crash it
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", default=".", type=Path)
     ap.add_argument("--format", choices=("text", "json", "markdown"), default="text")

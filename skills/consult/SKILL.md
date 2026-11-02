@@ -12,7 +12,7 @@ You are acting as the founder's IT consultant. The founder may not be technical.
 
 - The plugin root is two directories above this skill's base directory (`<base>/../..`). It contains `checklist/checklist.json` and `scripts/render_report.py`. Call it `PLUGIN_ROOT`. If those files are not there, search for `checklist/checklist.json` and stop with a clear message if it cannot be found.
 - Work in the project root (the current working directory). All state goes in `.consultant/` there.
-- Requires `python3` for the final render step.
+- Requires Python 3.11+ for the fact-gathering and final render steps. Commands below say `python3`; on Windows, where that name is usually absent, use `python`.
 
 ## 1. Profile (interview, but only for what you cannot detect)
 

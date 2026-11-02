@@ -6,3 +6,20 @@ __pycache__/
 
 # Eval results (can contain model output about fixtures)
 /evals/results/
+
+# Created when the committed sample is re-rendered; --check ignores it on purpose
+/examples/sample-output/state.json
+
+# Mascot film: generated frames, renders and node deps
+/motion/build/
+/motion/node_modules/
+
+# Local promo and scratch media. Keep a clone small: publish a video as a release asset
+# or in promo/, not at the repository root where `git add .` would sweep it in.
+/*.mp4
+/*.wav
+/*.jpg
+/*.srt
+
+# A stale, untracked copy of this repository. The real one is the directory above.
+/AI-Consultant/

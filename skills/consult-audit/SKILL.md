@@ -21,3 +21,5 @@ Use this after fixes, or for a focused look at one area. It needs an existing `.
 - Never mark an item fixed because the founder says it is. The auditor re-checks the code.
 - Items that need a process or console check stay `unknown` until the founder supplies evidence. Offer to record it: for example, a restore-test log committed under `docs/`, or a screenshot referenced from `docs/evidence/`, which the auditor can then cite.
 - Do not modify application code in this skill.
+
+> On Windows, if `python3` is not on PATH, run the same commands with `python`. The scripts are standard-library only; the interpreter name is the only difference.

@@ -35,6 +35,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import console  # noqa: E402
 import render_report  # noqa: E402
 import verify_packages  # noqa: E402
 
@@ -365,6 +366,7 @@ def to_markdown(result: dict) -> str:
 
 
 def main() -> int:
+    console.use_utf8()          # the report contains emoji; a cp1252 console must not crash it
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--base", required=True, help="base ref, e.g. origin/main")
     ap.add_argument("--head", default="HEAD")

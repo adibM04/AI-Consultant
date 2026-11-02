@@ -37,7 +37,7 @@ def rows_for(profile, findings, waivers=None):
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp) / "findings"
         d.mkdir()
-        (d / "d.json").write_text(json.dumps({"domain": "d", "items": findings}))
+        (d / "d.json").write_text(json.dumps({"domain": "d", "items": findings}), encoding="utf-8")
         found, warns = rr.collect_findings(d, known)
     rows = rr.build_rows(CHECKLIST, profile, found, waivers or {})
     return {r["id"]: r for r in rows}, warns
@@ -176,9 +176,9 @@ class EvidenceVerification(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         (self.root / "src").mkdir()
-        (self.root / "src" / "auth.py").write_text("a\nb\nc\n")
+        (self.root / "src" / "auth.py").write_text("a\nb\nc\n", encoding="utf-8")
         (self.root / ".consultant").mkdir()
-        (self.root / ".consultant" / "note.md").write_text("x")
+        (self.root / ".consultant" / "note.md").write_text("x", encoding="utf-8")
 
     def check(self, ref):
         return rr.evidence_resolves(ref, self.root)
@@ -203,7 +203,7 @@ class EvidenceVerification(unittest.TestCase):
         (d / "d.json").write_text(json.dumps({"domain": "d", "items": [
             {"id": "AAA-01", "status": "pass", "evidence": ["src/auth.py:2"]},
             {"id": "AAA-02", "status": "pass", "evidence": ["README.md:1", "totally/made/up.py:7"]},
-        ]}))
+        ]}), encoding="utf-8")
         found, warns = rr.collect_findings(d, {"AAA-01", "AAA-02"}, root=self.root)
         self.assertEqual(found["AAA-01"]["status"], "pass")
         self.assertEqual(found["AAA-02"]["status"], "unknown")
@@ -212,7 +212,7 @@ class EvidenceVerification(unittest.TestCase):
     def test_one_valid_reference_is_enough(self):
         d = Path(tempfile.mkdtemp())
         (d / "d.json").write_text(json.dumps({"domain": "d", "items": [
-            {"id": "AAA-01", "status": "pass", "evidence": ["nope.py:1", "src/auth.py:1"]}]}))
+            {"id": "AAA-01", "status": "pass", "evidence": ["nope.py:1", "src/auth.py:1"]}]}), encoding="utf-8")
         found, _ = rr.collect_findings(d, {"AAA-01"}, root=self.root)
         self.assertEqual(found["AAA-01"]["status"], "pass")
 
@@ -223,29 +223,68 @@ class EndToEnd(unittest.TestCase):
             base = Path(tmp)
             (base / "findings").mkdir()
             (base / "src").mkdir()
-            (base / "src" / "reset.ts").write_text("export const x = 1\n" * 10)
-            (base / "profile.json").write_text(json.dumps({"project": "Acme", "stage": "launch", "tags": ["b2b"]}))
+            (base / "src" / "reset.ts").write_text("export const x = 1\n" * 10, encoding="utf-8")
+            (base / "profile.json").write_text(json.dumps({"project": "Acme", "stage": "launch", "tags": ["b2b"]}), encoding="utf-8")
             (base / "findings" / "identity.json").write_text(
                 json.dumps({"domain": "identity", "items": [
                     {"id": "IDN-06", "status": "fail", "evidence": ["src/login.ts:10"], "summary": "No limiter", "fix": "Add one"},
                     {"id": "IDN-02", "status": "pass", "evidence": ["src/reset.ts:5"]},
                 ]})
-            )
+            , encoding="utf-8")
             cmd = [sys.executable, str(ROOT / "scripts" / "render_report.py"), "--dir", str(base), "--root", str(base),
                    "--today", "2026-01-01"]
-            self.assertEqual(subprocess.run(cmd, capture_output=True, text=True).returncode, 0)
-            report = (base / "REPORT.md").read_text()
+            self.assertEqual(subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace").returncode, 0)
+            report = (base / "REPORT.md").read_text(encoding="utf-8")
             self.assertIn("Verdict: NOT READY", report)
             self.assertIn("IDN-06", report)
             self.assertIn("People this product still needs", report)
-            self.assertEqual(subprocess.run(cmd + ["--ci"], capture_output=True, text=True).returncode, 1)
+            self.assertEqual(subprocess.run(cmd + ["--ci"], capture_output=True, text=True, encoding="utf-8", errors="replace").returncode, 1)
             # second run reports a diff against the first
-            self.assertIn("Since the last run", (base / "REPORT.md").read_text())
+            self.assertIn("Since the last run", (base / "REPORT.md").read_text(encoding="utf-8"))
+
+    def test_check_mode_verifies_without_writing_and_ignores_state(self):
+        """A committed report must be reproducible from the repository alone, no local state."""
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / "findings").mkdir()
+            (base / "src").mkdir()
+            (base / "src" / "reset.ts").write_text("export const x = 1\n" * 10, encoding="utf-8")
+            (base / "profile.json").write_text(json.dumps({"project": "Acme", "stage": "launch", "tags": ["b2b"]}),
+                                              encoding="utf-8")
+            finding = {"domain": "identity", "items": [
+                {"id": "IDN-06", "status": "fail", "evidence": ["src/login.ts:10"], "summary": "No limiter"},
+                {"id": "IDN-02", "status": "pass", "evidence": ["src/reset.ts:5"]},
+            ]}
+            path = base / "findings" / "identity.json"
+            path.write_text(json.dumps(finding), encoding="utf-8")
+            cmd = [sys.executable, str(ROOT / "scripts" / "render_report.py"), "--dir", str(base),
+                   "--root", str(base), "--today", "2026-01-01"]
+
+            def run(*extra):
+                return subprocess.run(cmd + list(extra), capture_output=True, text=True,
+                                      encoding="utf-8", errors="replace")
+
+            r = run("--check")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)          # missing is stale, not an error
+            self.assertIn("missing", (r.stdout + r.stderr).lower())
+            self.assertFalse((base / "REPORT.md").exists())                 # wrote nothing
+            self.assertFalse((base / "state.json").exists())
+
+            self.assertEqual(run().returncode, 0)
+            before = (base / "REPORT.md").read_bytes()
+            self.assertEqual(run("--check").returncode, 0)                  # state.json exists and is ignored
+
+            finding["items"][0].update(status="pass", evidence=["src/reset.ts:5"])
+            path.write_text(json.dumps(finding), encoding="utf-8")
+            r = run("--check")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("stale", (r.stdout + r.stderr).lower())
+            self.assertEqual((base / "REPORT.md").read_bytes(), before)     # still nothing written
 
 
 class RealChecklist(unittest.TestCase):
     def setUp(self):
-        self.data = json.loads((ROOT / "checklist" / "checklist.json").read_text())
+        self.data = json.loads((ROOT / "checklist" / "checklist.json").read_text(encoding="utf-8"))
 
     def test_ids_unique(self):
         ids = [i["id"] for d in self.data["domains"] for i in d["items"]]
@@ -261,7 +300,7 @@ class RealChecklist(unittest.TestCase):
             import yaml  # noqa: F401
         except ImportError:
             self.skipTest("PyYAML not installed")
-        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "checklist.py"), "build", "--check"], capture_output=True, text=True)
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "checklist.py"), "build", "--check"], capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(r.returncode, 0, r.stderr)
 
 

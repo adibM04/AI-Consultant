@@ -8,9 +8,9 @@ At least one critical gap is confirmed. Do not put paying customers on this unti
 
 | Pass | Fail | Partial | Unknown | Attested | Waived | Not audited |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0 | 13 | 0 | 2 | 0 | 0 | 54 |
+| 0 | 13 | 0 | 2 | 0 | 0 | 66 |
 
-Coverage: 15 of 69 in-scope items audited. 54 items are deferred to later stages and 47 do not apply to this product.
+Coverage: 15 of 81 in-scope items audited. 63 items are deferred to later stages and 49 do not apply to this product.
 
 > This report comes from reading the repository and answers the founder gave. It cannot see your cloud console, DNS, contracts or processes, so those items show as UNKNOWN until someone confirms them. It does not replace a penetration test, an auditor, or an engineer who understands your system.
 
@@ -192,6 +192,12 @@ Whether any real key was ever pasted into an AI chat or committed cannot be seen
 
 **To confirm:** Show evidence for: dangerouslySetInnerHTML, v-html, innerHTML, |safe, unescaped template output, markdown rendering without a sanitiser, user-supplied URLs in href.
 
+#### SEC-24 · Storage buckets are private by default and user files are served by short-lived signed URLs or an authorised endpoint
+
+`NOT AUDITED` · critical · owner: DevOps engineer · tier 1
+
+**To confirm:** Show evidence for: Look at bucket policies and ACLs in IaC, SDK calls that set public-read, and code that builds permanent public URLs for private user documents. Fail on public buckets that hold customer files, signed URLs that live for days or are returned to anyone without an ownership check, and guessable object keys with no authorisation in front. Public assets by design (marketing images) are fine if they live in a separate bucket. Say unknown when only the cloud console could settle it.
+
 #### AUT-08 · Mass assignment is prevented; clients cannot set role, tenant, price or owner fields
 
 `NOT AUDITED` · high · owner: Security engineer · tier 1
@@ -234,6 +240,18 @@ Whether any real key was ever pasted into an AI chat or committed cannot be seen
 
 **To confirm:** Show evidence for: Pool size settings, a pooler (PgBouncer, RDS Proxy, provider pooler) for serverless or multi-instance deployments, sensible timeouts.
 
+#### DAT-20 · Writes that must succeed or fail together run inside a database transaction
+
+`NOT AUDITED` · high · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Find flows with more than one write (create order and decrement stock, move money, create user and workspace). Fail on separate awaited writes with no transaction, a transaction opened but the writes issued on a different connection, and external calls (email, payment, AI) made inside an open transaction. Look at what the customer would see if the second write failed.
+
+#### DAT-21 · Two people or jobs updating the same record cannot silently overwrite or double-spend each other
+
+`NOT AUDITED` · high · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Look for read-modify-write sequences on balances, stock, counters, seats, coupons and status fields. Passes with atomic updates (UPDATE ... SET n = n - 1 WHERE n > 0), a version column with optimistic checks, row locks (SELECT FOR UPDATE) or a unique constraint. Fail on check-then-insert with no unique index, increments computed in application memory, and "if not used then mark used" without a lock.
+
 #### IDN-01 · Login and signup handle plus-addressing, case, Unicode and whitespace in emails consistently
 
 `NOT AUDITED` · high · owner: Backend engineer · tier 1
@@ -251,6 +269,24 @@ Whether any real key was ever pasted into an AI chat or committed cannot be seen
 `NOT AUDITED` · high · owner: Security engineer · tier 1
 
 **To confirm:** Show evidence for: Social login or SSO that links to an existing account by unverified email enables account takeover. Check the linking logic.
+
+#### IDN-13 · Access tokens are signed, verified and short-lived, and refresh tokens rotate and can be revoked
+
+`NOT AUDITED` · high · owner: Security engineer · tier 1
+
+**To confirm:** Show evidence for: Find where JWTs or API tokens are issued and verified. Fail on verification skipped or decode-only calls, the "none" algorithm or an algorithm taken from the token header, a hard-coded or weak signing secret, access tokens that live for days, tokens kept in localStorage where XSS can read them, and refresh tokens that never rotate or cannot be revoked after logout or a password change. Provider-managed sessions (Auth0, Clerk, Supabase) are a pass if the app verifies their tokens with the provider's library and does not re-implement it.
+
+#### IDN-14 · OAuth and social login uses a state parameter, PKCE and exact redirect URIs
+
+`NOT AUDITED` · high · owner: Security engineer · tier 1
+
+**To confirm:** Show evidence for: Look at the authorization-code flow the app implements or configures. Fail on a missing or unchecked state value (login CSRF), public clients without PKCE, wildcard or prefix-matched redirect URIs, tokens returned in URL fragments or query strings, and linking a social account to an existing account by email without a verified-email check. Not applicable if login is fully delegated and the app configures no redirect URIs of its own.
+
+#### IDN-15 · Session cookies are HttpOnly, Secure and SameSite, and the session ID changes at login
+
+`NOT AUDITED` · high · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Find the cookie options for the session or auth cookie. Fail on a missing HttpOnly, Secure or SameSite flag, a session ID that stays the same across login or privilege change (session fixation), session IDs in URLs, and long-lived cookies with no server-side expiry. Framework defaults count if the config does not override them.
 
 #### INF-03 · A deploy pipeline runs tests, linting and type checks before anything reaches customers
 
@@ -282,17 +318,41 @@ Whether any real key was ever pasted into an AI chat or committed cannot be seen
 
 **To confirm:** Show evidence for: Cloud billing alarms, provider spend limits, and per-key caps on AI and email APIs.
 
+#### INF-22 · Databases and internal services are not reachable from the public internet
+
+`NOT AUDITED` · high · owner: DevOps engineer · tier 1
+
+**To confirm:** Show evidence for: Read security groups, firewall rules, compose files, Kubernetes services and managed-database settings. Fail on 0.0.0.0/0 open to database, cache or admin ports (5432, 3306, 6379, 27017, 9200, 22), databases with public endpoints and no allow-list, and containers publishing internal ports to the host. Private subnets with only the load balancer public is the pass. Say unknown when no infrastructure code exists.
+
+#### INF-27 · Queue and job consumers are idempotent, because the same message will sometimes arrive twice
+
+`NOT AUDITED` · high · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Read the job and queue handlers. Passes with a unique key or processed-message table checked before the side effect, or operations that are naturally repeatable. Fail on handlers that send an email, charge, create a record or call a partner each time they run with no duplicate check, and on handlers that acknowledge before the work is done. "Exactly once" claims from the broker do not count as evidence.
+
 #### API-09 · Every outbound third-party call has a timeout, a circuit breaker or fallback, and an owner for when the vendor is down
 
 `NOT AUDITED` · high · owner: Backend engineer · tier 1
 
 **To confirm:** Show evidence for: HTTP client defaults, failure handling in user-facing paths, graceful degradation of non-critical vendors (analytics, chat widgets).
 
+#### API-10 · WebSocket and server-sent event connections are authenticated, authorised per message and origin-checked
+
+`NOT AUDITED` · high · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Find the socket or event-stream endpoints. Fail on connections accepted without authentication, channel or room subscriptions that trust a client-supplied ID without an ownership check, no Origin check (cross-site WebSocket hijacking), tokens in the URL that end up in logs, and no limits on connections, message size or message rate. Not applicable if the app has no real-time channels.
+
 #### MNT-02 · Every change gets a human code review before merge
 
 `NOT AUDITED` · high · owner: Senior engineer · tier 1
 
 **To confirm:** Show evidence for: Branch protection and PR history. Repos with direct pushes to main and AI-authored commits that nobody read are a finding.
+
+#### MNT-13 · Errors are handled deliberately, with no swallowed failures, unhandled rejections or half-finished operations
+
+`NOT AUDITED` · high · owner: Senior engineer · tier 1
+
+**To confirm:** Show evidence for: Grep for empty catch blocks, catch blocks that only log and continue, promises with no await or catch, missing global handlers for unhandledRejection or uncaughtException, and async handlers whose errors never reach the framework error handler. In the money and data paths, check that a failure partway through leaves the system in a consistent state and that the customer is told. Tolerate deliberate, commented ignores.
 
 #### OBS-01 · Logs are structured, correlated by request ID and searchable in one place
 
@@ -414,6 +474,12 @@ Whether any real key was ever pasted into an AI chat or committed cannot be seen
 
 **To confirm:** Show evidence for: OFFSET pagination on large tables, no max page size, no stable sort key. Cursor/keyset pagination is the fix.
 
+#### DAT-22 · Foreign-key delete behaviour is chosen deliberately, so one delete cannot wipe unrelated data
+
+`NOT AUDITED` · medium · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Read the ON DELETE rules and ORM cascade settings. Fail on CASCADE from long-lived records (customers, workspaces, invoices) down to financial or audit records, ORM cascades that delete more than intended, and delete behaviour that was simply left at the default. Restrict or soft delete is the safer choice for anything the business must keep.
+
 #### IDN-08 · Signup, login and reset responses do not reveal whether an account exists
 
 `NOT AUDITED` · medium · owner: Security engineer · tier 1
@@ -468,6 +534,12 @@ Whether any real key was ever pasted into an AI chat or committed cannot be seen
 
 **To confirm:** Show evidence for: Middleware, framework config, or CDN/edge rules. Judge by what is configured, and suggest curl -I against the live site for confirmation.
 
+#### SEC-22 · Request body size limits and request timeouts are set, so one oversized request cannot take the app down
+
+`NOT AUDITED` · medium · owner: Backend engineer · tier 1
+
+**To confirm:** Show evidence for: Look for body-parser or framework limits, reverse-proxy or platform limits, and server timeouts. Fail on unlimited JSON or text bodies, no cap on array or page-size parameters, regular expressions run on unbounded input, and handlers with no timeout at all. Upload size limits alone (SEC-09) do not count.
+
 #### TST-04 · Every fixed bug gets a regression test
 
 `NOT AUDITED` · medium · owner: QA engineer · tier 1
@@ -498,11 +570,11 @@ Open items grouped by the kind of person who normally owns them.
 
 | Role | Open items | Critical | Most urgent |
 |---|---:|---:|---|
-| Security engineer | 22 | 10 | AUT-01 Every route, API handler, server action and job enforces authorization |
-| Backend engineer | 20 | 4 | DAT-11 All input is validated on the server with a schema, not only in the fo |
-| DevOps engineer | 11 | 2 | DAT-07 Automated backups run at least nightly |
+| Security engineer | 24 | 10 | AUT-01 Every route, API handler, server action and job enforces authorization |
+| Backend engineer | 27 | 4 | DAT-11 All input is validated on the server with a schema, not only in the fo |
+| DevOps engineer | 13 | 3 | DAT-07 Automated backups run at least nightly |
 | Tech lead | 3 | 1 | OPS-04 Every account, domain, repository, cloud project and vendor login belo |
-| Senior engineer | 6 | 0 | MNT-02 Every change gets a human code review before merge |
+| Senior engineer | 7 | 0 | MNT-02 Every change gets a human code review before merge |
 | QA engineer | 3 | 0 | TST-01 Business logic has unit tests that assert real expected behaviour, not |
 | Frontend engineer | 3 | 0 | UXP-01 Every screen has designed empty, loading and error states |
 | Lawyer | 1 | 0 | CMP-09 The terms of service and privacy policy match what the code actually c |
@@ -521,14 +593,17 @@ Not counted against the verdict yet. Plan for these before you move up a stage.
 - tier 2 · INF-02 · Infrastructure is defined as code, so the setup does not live in one person's memory
 - tier 2 · INF-04 · Rollback is one click or one command and has been rehearsed
 - tier 2 · INF-13 · Scheduled jobs run exactly once even with multiple servers (leader election, locks or a managed scheduler)
+- tier 2 · INF-26 · Terraform and other infrastructure state is stored remotely, locked and encrypted, never committed
 - tier 2 · MNT-05 · The framework and runtime versions still receive security patches
 - tier 2 · OBS-04 · Alerts page a human, on symptoms that matter, and are tuned until they stop paging for nothing
 - tier 2 · OBS-07 · There is an on-call rotation, and a named person who picks up
+- tier 2 · OBS-11 · A written incident response plan says who leads, how customers are told and who handles a breach notification
 - tier 2 · PAY-05 · Currency, rounding and tax rules are defined for every country sold into
 - tier 2 · PAY-06 · Sales tax and VAT are calculated, collected and reported correctly where required
 - tier 2 · PAY-09 · Refunds, credits and partial refunds work and keep revenue records consistent
 - tier 2 · TST-05 · Load testing has been done at realistic data volume before launch campaigns
 - tier 2 · CMP-11 · A DPA template and sub-processor list are available for business customers
+- tier 2 · CMP-13 · Dependency and asset licences are known and compatible with how the product is distributed and sold
 - tier 2 · DAT-10 · Deletes of user-visible records are soft (recoverable) or otherwise reversible
 - tier 2 · DAT-17 · Customers can export their data in a usable format without engineering help
 - tier 2 · DAT-18 · Imports validate, report row-level errors and survive odd encodings, delimiters and huge files
@@ -537,6 +612,9 @@ Not counted against the verdict yet. Plan for these before you move up a stage.
 - tier 2 · INF-07 · Autoscaling or enough headroom exists for the predictable spike
 - tier 2 · INF-12 · Jobs that exhaust their retries land in a dead-letter queue that someone is alerted about
 - tier 2 · INF-14 · Caching has a stated invalidation strategy and cannot serve one user's data to another
+- tier 2 · INF-23 · App servers keep no state locally, so any instance can be replaced or added at any time
+- tier 2 · INF-24 · Container images are small, run as a non-root user and are scanned before release
+- tier 2 · INF-25 · Memory and CPU are bounded and monitored, and nothing in the code grows without limit
 - tier 2 · API-06 · Parsing third-party responses tolerates unexpected shape changes and fails loudly, not silently
 - tier 2 · MNT-04 · Dependencies are upgraded on a regular cadence, and nothing is two major versions behind
 - tier 2 · MNT-10 · Documentation exists for whoever inherits the system (components, data flow, third parties, how to deploy)
@@ -548,9 +626,12 @@ Not counted against the verdict yet. Plan for these before you move up a stage.
 - tier 2 · OPS-01 · An admin panel lets your ops team do routine work without database access
 - tier 2 · OPS-02 · Support tooling lets customer success answer questions without pinging engineering
 - tier 2 · PAY-13 · Finance can reconcile revenue reports against the payment provider and the bank
+- tier 2 · PAY-14 · Chargebacks and disputes are detected, answered with evidence and tracked against revenue
 - tier 2 · SEC-18 · A vulnerability disclosure process exists (security.txt, a monitored security@ inbox, a response SLA)
 - tier 2 · SEC-19 · There is a documented plan for a stolen laptop or leaked credential (disk encryption, remote wipe, revocation steps)
 - tier 2 · SEC-20 · Webhook endpoints, public APIs and forms are protected against automated abuse (bot protection, quotas)
+- tier 2 · SEC-21 · Secrets, tokens and signatures are compared in constant time
+- tier 2 · SEC-23 · A threat model for the main flows exists and is revisited when features change
 - tier 2 · TST-03 · Integration tests cover every third-party API the product depends on, against sandboxes or recorded contracts
 - tier 2 · UXP-04 · Pages and bundles are light enough for hotel wifi and mid-range phones
 - tier 2 · UXP-08 · The app is usable by keyboard and screen reader (semantic HTML, labels, focus management, contrast)

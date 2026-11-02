@@ -21,7 +21,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -35,6 +37,25 @@ import score_skills  # noqa: E402
 EXAMPLES = ROOT / "examples"
 HIDDEN = {"expected-findings.json", "eval.json"}
 ALLOWED_TOOLS = "Bash,Read,Grep,Glob,Write,Edit,Agent,Skill"
+
+
+def remove_tree(path: Path) -> None:
+    """Remove a working copy even where git's objects are read-only.
+
+    shutil.rmtree(..., ignore_errors=True) silently leaves the whole tree on Windows, where
+    .git/objects is marked read-only, so every dry run leaked a temp directory.
+    """
+    def make_writable(func, target, _exc):
+        try:
+            os.chmod(target, stat.S_IWRITE)
+            func(target)
+        except OSError:
+            pass
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=make_writable)
+    else:
+        shutil.rmtree(path, onerror=lambda func, target, exc: make_writable(func, target, exc[1]))
 
 PROMPT = """Use the ai-consultant:consult skill to audit this project. Nobody is available to answer questions, so \
 run non-interactively: a confirmed profile already exists at .consultant/profile.json (use it unchanged and do \
@@ -79,7 +100,7 @@ def run_fixture(fixture: str, args) -> dict:
     print(f"[{fixture}] work dir {work}")
     if args.dry_run:
         print("  " + " ".join(cmd[:4]) + " ...")
-        shutil.rmtree(work, ignore_errors=True)
+        remove_tree(work)
         return {"fixture": fixture, "dry_run": True}
     started = dt.datetime.now()
     proc = subprocess.run(cmd, cwd=project, capture_output=True, text=True, timeout=args.timeout)
@@ -100,7 +121,7 @@ def run_fixture(fixture: str, args) -> dict:
     (keep / "result.json").write_text(json.dumps({**out, "claude": meta}, indent=2), encoding="utf-8")
     print(f"[{fixture}] saved {keep.relative_to(ROOT)}")
     if not args.keep:
-        shutil.rmtree(work, ignore_errors=True)
+        remove_tree(work)
     return out
 
 
@@ -124,7 +145,7 @@ def run_scenario(name: str, args) -> dict:
         cmd += ["--model", args.model]
     print(f"[{name}] work dir {work}")
     if args.dry_run:
-        shutil.rmtree(work, ignore_errors=True)
+        remove_tree(work)
         return {"fixture": name, "dry_run": True}
     started = dt.datetime.now()
     proc = subprocess.run(cmd, cwd=project, capture_output=True, text=True, timeout=args.timeout)
@@ -144,7 +165,7 @@ def run_scenario(name: str, args) -> dict:
     (keep / "result.json").write_text(json.dumps({**out, "claude": meta}, indent=2), encoding="utf-8")
     print(f"[{name}] saved {keep.relative_to(ROOT)}")
     if not args.keep:
-        shutil.rmtree(work, ignore_errors=True)
+        remove_tree(work)
     return out
 
 

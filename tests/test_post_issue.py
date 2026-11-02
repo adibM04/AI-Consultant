@@ -87,14 +87,14 @@ class Publish(unittest.TestCase):
 class Cli(unittest.TestCase):
     def run_cli(self, *args, env=None):
         base = {k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")}
-        return subprocess.run([sys.executable, str(ROOT / "scripts" / "post_issue.py"), *args], capture_output=True, text=True, env={**base, **(env or {})})
+        return subprocess.run([sys.executable, str(ROOT / "scripts" / "post_issue.py"), *args], capture_output=True, text=True, env={**base, **(env or {})}, encoding="utf-8", errors="replace")
 
     def test_skips_quietly_without_credentials_and_still_writes_state(self):
         out = Path(tempfile.mkdtemp()) / "state.json"
         r = self.run_cli("fetch-state", "--out", str(out))
         self.assertEqual(r.returncode, 0)
         self.assertIn("skipping", r.stdout)
-        self.assertEqual(json.loads(out.read_text()), {})                     # the next step still has a state file to read
+        self.assertEqual(json.loads(out.read_text(encoding="utf-8")), {})                     # the next step still has a state file to read
 
 
 class Template(unittest.TestCase):
@@ -103,7 +103,7 @@ class Template(unittest.TestCase):
             import yaml
         except ImportError:
             self.skipTest("PyYAML not installed")
-        text = (ROOT / "templates" / "advisory-watch.yml").read_text()
+        text = (ROOT / "templates" / "advisory-watch.yml").read_text(encoding="utf-8")
         wf = yaml.safe_load(text)
         self.assertEqual(set(wf[True]), {"schedule", "workflow_dispatch"})
         self.assertEqual(wf["permissions"], {"contents": "read", "issues": "write"})

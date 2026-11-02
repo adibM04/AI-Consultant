@@ -9,8 +9,22 @@ sys.path.insert(0, str(ROOT / "docs" / "assets"))
 
 import make_demo_gif as demo  # noqa: E402
 
-DOCS = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "CHANGELOG.md", *sorted((ROOT / "docs").glob("*.md")),
-        *sorted((ROOT / "examples" / "real-run").glob("README.md")), ROOT / "evals" / "README.md"]
+DOCS = sorted(
+    {p for p in [
+        ROOT / "README.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "CHANGELOG.md",
+        ROOT / "ROADMAP.md",
+        ROOT / "SUPPORT.md",
+        ROOT / ".github" / "CODE_OF_CONDUCT.md",
+        ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md",
+        ROOT / "evals" / "README.md",
+        *(ROOT / "docs").glob("*.md"),
+        *(ROOT / "examples").glob("*/README.md"),
+        *(ROOT / ".github" / "ISSUE_TEMPLATE").glob("*.md"),
+    ] if p.exists()},
+    key=str,
+)
 LINK = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)\)|<img[^>]+src=\"([^\"]+)\"")
 
 
@@ -44,7 +58,7 @@ class Links(unittest.TestCase):
 class DemoGif(unittest.TestCase):
     def test_numbers_come_from_the_real_run(self):
         data = demo.load_real_run()
-        report = (ROOT / "examples" / "real-run" / "REPORT.md").read_text()
+        report = (ROOT / "examples" / "real-run" / "REPORT.md").read_text(encoding="utf-8")
         self.assertIn(f"| {data['pass']} | {data['fail']} | {data['partial']} | {data['unknown']} |", report)
         self.assertEqual(data["refs"]["AUT-02"], "server.js:34-37")
         self.assertEqual(data["refs"]["SEC-06"], "server.js:16,23,30,35")
@@ -57,20 +71,20 @@ class DemoGif(unittest.TestCase):
             self.skipTest("Pillow not installed")
         path = ROOT / "docs" / "assets" / "demo.gif"
         self.assertLess(path.stat().st_size, 1_000_000)               # loads fast on a README
-        im = Image.open(path)
-        self.assertGreaterEqual(im.n_frames, 20)
-        self.assertEqual(im.info.get("loop"), 0)                      # loops
+        with Image.open(path) as im:
+            self.assertGreaterEqual(im.n_frames, 20)
+            self.assertEqual(im.info.get("loop"), 0)                  # loops
 
     def test_generator_fails_loudly_when_the_real_run_no_longer_matches(self):
         import json, shutil, tempfile
         tmp = Path(tempfile.mkdtemp()) / "real"
         shutil.copytree(ROOT / "examples" / "real-run", tmp)
         f = tmp / "findings" / "authorization.json"
-        d = json.loads(f.read_text())
+        d = json.loads(f.read_text(encoding="utf-8"))
         for item in d["items"]:
             if item["id"] == "AUT-02":
                 item["status"] = "pass"
-        f.write_text(json.dumps(d))
+        f.write_text(json.dumps(d), encoding="utf-8")
         with self.assertRaises(SystemExit):
             demo.load_real_run(tmp)
 
