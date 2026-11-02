@@ -5,7 +5,17 @@ something moves down only when it is replaced by something more useful, and it m
 "Shipped" only when it is in a release.
 
 The [pinned roadmap issue](https://github.com/adibM04/AI-Consultant/issues/12) is the
-place to comment. This file is the canonical version and is updated with each release.
+place to comment. This file is the canonical version, updated when the backlog changes
+and with each release.
+
+## Recently merged (not yet released)
+
+- The contributor pipeline ([#14](https://github.com/adibM04/AI-Consultant/pull/14)):
+  CI on Linux, macOS and Windows, one command (`scripts/dev.py check`), community files,
+  and the public backlog. It also fixed
+  [#3](https://github.com/adibM04/AI-Consultant/issues/3),
+  [#5](https://github.com/adibM04/AI-Consultant/issues/5) and
+  [#6](https://github.com/adibM04/AI-Consultant/issues/6).
 
 ## Shipped in 0.2
 
@@ -17,19 +27,13 @@ place to comment. This file is the canonical version and is updated with each re
 - Evidence attestations and buyer questionnaires that cannot overclaim
 - An eval harness with hostile fixtures
 
-## Now: make it easy to contribute
+## Now: the rest of the first-contribution backlog
 
 The constraint is contributor time, not ideas. These are ready to pick up, and each says
 exactly how to check your work:
 
-- [#3](https://github.com/adibM04/AI-Consultant/issues/3) — the sample report is stale,
-  and CI hides it by rewriting the file
 - [#4](https://github.com/adibM04/AI-Consultant/issues/4) — guard the check count in the
   README and docs against `checklist.json`
-- [#5](https://github.com/adibM04/AI-Consultant/issues/5) — the expected-findings test
-  skips the hostile repo and every future fixture
-- [#6](https://github.com/adibM04/AI-Consultant/issues/6) — link-check the issue
-  templates and every example README
 - [#7](https://github.com/adibM04/AI-Consultant/issues/7) — write a worked example of
   adding one checklist item
 
