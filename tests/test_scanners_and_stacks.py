@@ -207,10 +207,15 @@ class PlaybookIntegrity(unittest.TestCase):
                     self.assertRegex(section, r"Maps to: ", f"{path.name}: {section.splitlines()[0]}")
 
     def test_expected_findings_reference_real_ids(self):
-        for fx in ("vibe-coded-app", "supabase-nextjs-app"):
-            data = json.loads((ROOT / "examples" / fx / "expected-findings.json").read_text(encoding="utf-8"))
-            for e in data["must_not_pass"]:
-                self.assertIn(e["id"], IDS)
+        """Every fixture, including any added later, must use ids that exist in the checklist."""
+        fixtures = sorted((ROOT / "examples").glob("*/expected-findings.json"))
+        self.assertTrue(fixtures, "no examples/*/expected-findings.json found")
+        for path in fixtures:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            for entry in data.get("must_not_pass", []):
+                with self.subTest(fixture=path.parent.name, item=entry.get("id")):
+                    self.assertTrue(entry.get("id") in IDS,
+                                    f"{path.parent.name}: unknown checklist id {entry.get('id')!r}")
 
 
 if __name__ == "__main__":
